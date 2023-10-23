@@ -15,10 +15,6 @@ using Elements.Assets;
 
 namespace Restonite
 {
-    public class Main
-    {
-
-    }
     public enum StatueType : int
     {
         None = 0,
@@ -54,7 +50,7 @@ namespace Restonite
             //Error("an error log");
             Engine.Current.RunPostInit(AddMenuOption);
 
-            Harmony harmony = new Harmony("U-nermerner.StatueUtilities");
+            Harmony harmony = new Harmony("com.nermerner.StatueUtilities");
             harmony.PatchAll();
         }
 
