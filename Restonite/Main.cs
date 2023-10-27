@@ -25,14 +25,6 @@ namespace Restonite
         Count,
     }
 
-    public static class ModExtensions
-    {
-        public static void Debugstr(this Slot x, string str)
-        {
-            // x.AddSlot(str);
-        }
-    }
-
     public class StoneMod : ResoniteMod
     {
         public override string Name => "Restonite";
@@ -63,17 +55,16 @@ namespace Restonite
         class StatueSystemWizard
         {
             Slot WizardSlot;
+            Text debugText;
 
             readonly ReferenceField<Slot> avatarRoot;
-            readonly ReferenceField<Slot> slotsToAdd;
+            readonly ReferenceField<Slot> statueSystemFallback;
             readonly ValueField<int> statueType;
-            readonly Button testButton;
-            readonly Button spawnCloudButton;
-            readonly RefEditor avatarField;
+            readonly Button confirmButton;
 
             readonly ReferenceField<IAssetProvider<Material>> baseStatueMaterial;
 
-            readonly ReferenceMultiplexer<SkinnedMeshRenderer> foundSkinnedMeshRenderers;
+            readonly ReferenceMultiplexer<MeshRenderer> foundSkinnedMeshRenderers;
 
             readonly CloudValueVariable<string> uriVariable;
 
@@ -82,41 +73,15 @@ namespace Restonite
                 return new StatueSystemWizard(x);
             }
 
-            Slot SpawnSlot(Slot x, string file, World world, float3 position, float3 scale)
+            public void LogString(string logMessage)
             {
-                DataTreeDictionary loadNode = DataTreeConverter.Load(file);
-
-                Slot slot = world.LocalUserSpace.AddSlot("SpawnSlotObject");
-                slot.CreateSpawnUndoPoint();
-                slot.LoadObject(loadNode);
-                slot.GlobalPosition = position;
-                slot.GlobalScale = scale;
-
-                return slot;
-            }
-
-            Slot GetSlotThing(Slot x)
-            {
-                // Yoinked from FrooxEngine.FileMetadata.OnImportFile
-                var fileName = uriVariable.Value.Value;
-                var fileUri = new Uri(fileName);
-
-                var file = x.Engine.AssetManager.GatherAsset(fileUri, 4.0f).GetAwaiter().GetResult().GetFile().GetAwaiter().GetResult();
-
-                if (file != null)
-                {
-                    x.LocalUser.GetPointInFrontOfUser(out var point, out var rotation, float3.Backward);
-
-                    return SpawnSlot(x, file, x.World, point, new float3(1.0f, 1.0f, 1.0f));
-                }
-                else
-                {
-                    return x.AddSlot("File was null after RequestGather");
-                }
+                Msg(logMessage);
+                this.debugText.Content.Value = $"{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{this.debugText?.Content?.Value ?? ""}";
             }
 
             StatueSystemWizard(Slot x)
             {
+                // Initialize cloud spawn
                 var statueSystemLoadSlot = x.AddSlot("Statue System Loader");
                 var statueSystemCloudURIVariable = statueSystemLoadSlot.AttachComponent<CloudValueVariable<string>>();
                 statueSystemCloudURIVariable.Path.Value = "U-Azavit.Statue.Stable.AssetURI";
@@ -125,6 +90,7 @@ namespace Restonite
                 statueSystemCloudURIVariable.IsLinkedToCloud.Value = true;
                 uriVariable = statueSystemCloudURIVariable;
 
+                // Init editor
                 WizardSlot = x;
                 WizardSlot.Tag = "Developer";
                 WizardSlot.PersistentSelf = false;
@@ -133,19 +99,16 @@ namespace Restonite
                 canvasPanel.Panel.AddCloseButton();
                 canvasPanel.Panel.AddParentButton();
                 canvasPanel.Panel.Title = WIZARD_TITLE;
-                canvasPanel.Canvas.Size.Value = new float2(800f, 756f);
+                canvasPanel.Canvas.Size.Value = new float2(800f, 1000f);
 
                 Slot Data = WizardSlot.AddSlot("Data");
 
                 avatarRoot = Data.AddSlot("avatarRoot").AttachComponent<ReferenceField<Slot>>();
-
-                slotsToAdd = Data.AddSlot("slotsToAdd").AttachComponent<ReferenceField<Slot>>();
-
+                statueSystemFallback = Data.AddSlot("statueSystemFallback").AttachComponent<ReferenceField<Slot>>();
                 baseStatueMaterial = Data.AddSlot("baseMaterial").AttachComponent<ReferenceField<IAssetProvider<Material>>>();
-
                 statueType = Data.AddSlot("statueType").AttachComponent<ValueField<int>>();
-
-                foundSkinnedMeshRenderers = Data.AddSlot("foundSMRs").AttachComponent<ReferenceMultiplexer<SkinnedMeshRenderer>>();
+                foundSkinnedMeshRenderers = Data.AddSlot("foundMRs").AttachComponent<ReferenceMultiplexer<MeshRenderer>>();
+                
                 /*
                 - Add avatar space
                 - Add statue system objects
@@ -179,46 +142,58 @@ namespace Restonite
 
                 UI.NestInto(left);
 
+                UI.SplitVertically(0.5f, out RectTransform top, out RectTransform bottom);
+
+                UI.NestInto(top);
+
                 UI.Style.MinHeight = 24f;
                 UI.Style.PreferredHeight = 24f;
                 UI.Style.PreferredWidth = 400f;
                 UI.Style.MinWidth = 400f;
 
                 VerticalLayout verticalLayout = UI.VerticalLayout(4f, childAlignment: Alignment.TopLeft);
-                verticalLayout.ForceExpandHeight.Value = false;
+                verticalLayout.ForceExpandHeight.Value = true;
 
-                UI.Text("Processing Root:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
-                UI.Next("Root");
+                UI.Text("Avatar Root Slot:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                UI.Next("Avatar Root Slot");
                 var avatarField = UI.Current.AttachComponent<RefEditor>();
                 avatarField.Setup(avatarRoot.Reference);
                 avatarRoot.Reference.OnValueChange += (field) =>
                 {
                     foundSkinnedMeshRenderers.References.Clear();
-                    foundSkinnedMeshRenderers.References.AddRange(avatarRoot.Reference.Target.GetComponentsInChildren<SkinnedMeshRenderer>());
+                    foundSkinnedMeshRenderers.References.AddRange(avatarRoot.Reference.Target.GetComponentsInChildren<MeshRenderer>());
                 };
 
-                //UI.Text("Slots to add (Statue System):").HorizontalAlign.Value = TextHorizontalAlignment.Left;
-                //UI.Next("SlotsToAdd");
-                //UI.Current.AttachComponent<RefEditor>().Setup(slotsToAdd.Reference);
-
-                UI.Text("Default statue material:");
+                UI.Text("Default statue material:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
                 UI.Next("Base Texture");
                 UI.Current.AttachComponent<RefEditor>().Setup(baseStatueMaterial.Reference);
 
-                UI.Text("Statue transition type:");
-                UI.Next("Statue Type");
+                UI.Text("Statue transition type:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
                 UI.HorizontalElementWithLabel("Alpha Fade", 0.9f, () => UI.ValueRadio<int>(statueType.Value, (int)StatueType.AlphaFade));
                 UI.HorizontalElementWithLabel("Alpha Cutout", 0.9f, () => UI.ValueRadio<int>(statueType.Value, (int)StatueType.AlphaCutout));
                 UI.HorizontalElementWithLabel("Plane Slicer", 0.9f, () => UI.ValueRadio<int>(statueType.Value, (int)StatueType.PlaneSlicer));
                 UI.HorizontalElementWithLabel("Radial Slicer", 0.9f, () => UI.ValueRadio<int>(statueType.Value, (int)StatueType.RadialSlicer));
 
                 UI.Spacer(24f);
+                confirmButton = UI.Button("Statuefy!");
+                confirmButton.LocalPressed += OnInstallButtonPressed;
 
-                testButton = UI.Button("Statuefy!");
-                testButton.LocalPressed += OnTestButtonPressed;
+                UI.Text("(Optional, Advanced) Override system:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                UI.Next("(Optional, Advanced) Override system:");
+                UI.Current.AttachComponent<RefEditor>().Setup(statueSystemFallback.Reference);
 
-                //spawnCloudButton = UI.Button("Try spawning statue system from cloud");
-                //spawnCloudButton.LocalPressed += (a, b) => { GetSlotThing(x); };
+                UI.Spacer(24f);
+
+
+                UI.NestInto(bottom);
+
+                UI.Text("Log");
+                UI.ScrollArea();
+
+                debugText = UI.Text("");
+                debugText.HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                debugText.VerticalAlign.Value = TextVerticalAlignment.Top;
+                debugText.Size.Value = 22.0f;
 
                 UI.NestInto(right);
                 UI.ScrollArea();
@@ -229,411 +204,469 @@ namespace Restonite
                 WizardSlot.PositionInFrontOfUser(float3.Backward, distance: 1f);
             }
 
-            void OnTestButtonPressed(IButton button, ButtonEventData eventData)
+            void OnInstallButtonPressed(IButton button, ButtonEventData eventData)
             {
                 var scratchSpace = WizardSlot.AddSlot("Scratch space");
-                InstallSystemOnAvatar(avatarRoot.Reference.Target, scratchSpace, uriVariable, foundSkinnedMeshRenderers.References.ToList(), baseStatueMaterial.Reference.Target, (StatueType)statueType.Value.Value);
+                try
+                {
+                    InstallSystemOnAvatar(avatarRoot.Reference.Target, scratchSpace, uriVariable, foundSkinnedMeshRenderers.References.ToList(), baseStatueMaterial.Reference.Target, (StatueType)statueType.Value.Value);
+                    HighlightHelper.FlashHighlight(avatarRoot.Reference.Target, (_a) => true, new colorX(0.5f, 0.5f, 0.5f, 1.0f));
+                }
+                catch (Exception ex)
+                {
+                    var errorString = $"ERROR: Encountered exception during install: {ex.Message} / {ex}";
+                    this.LogString(errorString);
+                    this.LogString("ERROR: Sorry! We ran into an error installing the statue system.<br>Debugging information has been copied to your clipboard; please send it to the Statue devs!<br>(Arion, Azavit, Nermerner)");
+                    Engine.Current.InputInterface.Clipboard.SetText(this.debugText.Content.Value);
+                }
             }
-        }
 
-
-        public static void InstallSystemOnAvatar(
+            public void InstallSystemOnAvatar(
             Slot avatarRoot,
             Slot scratchSpace,
             CloudValueVariable<string> uriVariable,
-            List<SkinnedMeshRenderer> normalSkinnedMeshRenderers,
+            List<MeshRenderer> normalSkinnedMeshRenderers,
             IAssetProvider<Material> baseStatueMaterial,
             StatueType statueType)
-        {
-            scratchSpace.Debugstr("Start, avatar = " + avatarRoot.Name);
-
-            // Start
-            var avatarRootSlot = avatarRoot;
-
-            // Attach dynvar space
-            var avatarSpace = avatarRootSlot.GetComponent<DynamicVariableSpace>((space) => space.SpaceName == "Avatar");
-            if (avatarSpace == null)
             {
-                avatarSpace = avatarRootSlot.AttachComponent<DynamicVariableSpace>();
-                avatarSpace.SpaceName.Value = "Avatar";
-            }
-            scratchSpace.Debugstr("Space");
+                this.LogString("Starting InstallSystemOnAvatar for: " + avatarRoot.Name);
 
-            // Add statue system objects
-            var systemSlot = GetSlotThing(scratchSpace, uriVariable);
-            scratchSpace.Debugstr("Slotspawn");
+                // Start
+                var avatarRootSlot = avatarRoot;
 
-            systemSlot.FindChild((slot) => slot.Name == "Statue").Children.ToList().ForEach((childSlot) =>
-            {
-                childSlot.Duplicate(avatarRootSlot);
-            });
-            scratchSpace.Debugstr("Slot attached, SMR len = " + normalSkinnedMeshRenderers.Count());
-
-            // Find unique slots to duplicate
-            var normalUniqueSlots = new Dictionary<RefID, Slot>();
-            normalSkinnedMeshRenderers.ForEach((smr) =>
-            {
-                if (!normalUniqueSlots.ContainsKey(smr.Slot.ReferenceID))
+                // Attach dynvar space
+                var avatarSpace = avatarRootSlot.GetComponent<DynamicVariableSpace>((space) => space.SpaceName == "Avatar");
+                if (avatarSpace == null)
                 {
-                    normalUniqueSlots.Add(smr.Slot.ReferenceID, smr.Slot);
+                    avatarSpace = avatarRootSlot.AttachComponent<DynamicVariableSpace>();
+                    avatarSpace.SpaceName.Value = "Avatar";
+                    this.LogString("Created Avatar DynVarSpace");
                 }
-            });
-            scratchSpace.Debugstr("SMRS");
-
-            // Duplicate each statue slot
-            var statueSlots = new List<Slot>();
-            normalUniqueSlots.ToList().ForEach((slot) =>
-            {
-                statueSlots.Add(slot.Value.Duplicate());
-                statueSlots.Last().Name = slot.Value.Name + "_Statue";
-            });
-
-            // Get SMRs for each statue slot
-            var statueSkinnedMeshRenderers = new List<SkinnedMeshRenderer>();
-            statueSlots.ForEach((slot) =>
-            {
-                var smrs = slot.GetComponents<SkinnedMeshRenderer>();
-                statueSkinnedMeshRenderers.AddRange(smrs);
-            });
-
-            var driverSlot = avatarRootSlot.AddSlot(name: "Drivers");
-            // Oh lordy
-            // var materialDriversSlot = driverSlot.AddSlot("Materials");
-
-            // Materials:
-            // 1. For each material that needs to be created, create a driver and default material
-            // 2. For each old material, give it an appropriate blend mode
-
-            // Create a map of normal materials -> statue materials
-            var materialHolder = avatarRootSlot.AddSlot("Generated Materials");
-
-            var statueMaterialHolder = materialHolder.AddSlot("Statue Materials");
-
-
-
-            // Creating blinder material
-            {
-                var blinderMaterialHolder = statueMaterialHolder.AddSlot("Statue 0");
-                var blinderDefaultMaterial = blinderMaterialHolder.CopyComponent((AssetProvider<Material>)baseStatueMaterial);
-
-                var blinderDynVar = blinderMaterialHolder.AttachComponent<DynamicReferenceVariable<IAssetProvider<Material>>>();
-                blinderDynVar.VariableName.Value = "Avatar/Statue.Material0";
-                blinderDynVar.Reference.Value = blinderDefaultMaterial.ReferenceID;
-                // Assigns Statue.Material.Assigned to field
-                var assignedMaterialDriver = blinderMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
-                assignedMaterialDriver.VariableName.Value = "Avatar/Statue.Material.Assigned";
-
-                // Stores assigned for Equality check
-                var assignedMaterialField = blinderMaterialHolder.AttachComponent<ReferenceField<IAssetProvider<Material>>>();
-                assignedMaterialDriver.Target.ForceLink(assignedMaterialField.Reference);
-
-                // Assigns Statue.Material.Assigned to boolean
-                var bassignedMaterialDriver = blinderMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
-                bassignedMaterialDriver.VariableName.Value = "Avatar/Statue.Material.Assigned";
-
-                // Decides whether we use default or assigned
-                var booleanReferenceDriver = blinderMaterialHolder.AttachComponent<BooleanReferenceDriver<IAssetProvider<Material>>>();
-                booleanReferenceDriver.TrueTarget.Value = blinderDefaultMaterial.ReferenceID;
-                bassignedMaterialDriver.Target.ForceLink(booleanReferenceDriver.FalseTarget);
-
-                // Checks if assigned material is null and writes that value to boolean ref driver
-                var equalityDriver = blinderMaterialHolder.AttachComponent<ReferenceEqualityDriver<IAssetProvider<Material>>>();
-                equalityDriver.TargetReference.Target = assignedMaterialField.Reference;
-                equalityDriver.Target.ForceLink(booleanReferenceDriver.State);
-
-                booleanReferenceDriver.TargetReference.ForceLink(blinderDynVar.Reference);
-            }
-
-
-            scratchSpace.Debugstr("a");
-
-            // Create Material objects for each statue material
-            var oldMaterialToStatueMaterialMap = new Dictionary<RefID, ReferenceMultiDriver<IAssetProvider<Material>>>();
-            statueSkinnedMeshRenderers.ForEach((smr) =>
-            {
-                for (int i = 0; i < smr.Materials.Count; ++i)
+                else
                 {
-                    var material = smr.Materials[i];
+                    this.LogString("Avatar DynVarSpace already exists, skipping");
+                }
 
-                    if (!oldMaterialToStatueMaterialMap.ContainsKey(material.ReferenceID))
+                // Add statue system objects
+                var systemSlot = GetStatueSystem(scratchSpace, uriVariable);
+
+                this.LogString("Duplicating slots onto Avatar Root");
+
+                systemSlot.GetChildrenWithTag("CopyToStatue").ForEach((childSlot) =>
+                {
+                    this.LogString($"Adding {childSlot.Name} with tag {childSlot.Tag}");
+                    childSlot.Duplicate(avatarRootSlot);
+                });
+
+                this.LogString($"Found {this.foundSkinnedMeshRenderers} MeshRenderers");
+
+                // Find unique slots to duplicate
+                var normalUniqueSlots = new Dictionary<RefID, Slot>();
+                normalSkinnedMeshRenderers.ForEach((smr) =>
+                {
+                    if (!normalUniqueSlots.ContainsKey(smr.Slot.ReferenceID))
                     {
-                        // If assigned == null, use default
-
-                        // Create a new statue material object (i.e. drives material slot on statue SMR, has default material with normal map)
-                        var newMaterialHolder = statueMaterialHolder.AddSlot($"Statue {oldMaterialToStatueMaterialMap.Count + 1}");
-                        var newDefaultMaterial = MaterialHelpers.CreateStatueMaterial(material, baseStatueMaterial, newMaterialHolder);
-
-                        // Assigns Statue.Material.Assigned to equality
-                        var assignedMaterialDriver = newMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
-                        assignedMaterialDriver.VariableName.Value = "Avatar/Statue.Material.Assigned";
-                        var assignedMaterialField = newMaterialHolder.AttachComponent<ReferenceField<IAssetProvider<Material>>>();
-                        assignedMaterialDriver.Target.ForceLink(assignedMaterialField.Reference);
-
-                        // Assigns Statue.Material.Assigned to boolean
-                        var bassignedMaterialDriver = newMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
-                        bassignedMaterialDriver.VariableName.Value = "Avatar/Statue.Material.Assigned";
-
-                        // Decides whether we use default or assigned
-                        var booleanReferenceDriver = newMaterialHolder.AttachComponent<BooleanReferenceDriver<IAssetProvider<Material>>>();
-                        booleanReferenceDriver.TrueTarget.Value = newDefaultMaterial.ReferenceID;
-                        bassignedMaterialDriver.Target.ForceLink(booleanReferenceDriver.FalseTarget);
-
-                        // Checks if assigned material is null and writes that value to boolean ref driver
-                        var equalityDriver = newMaterialHolder.AttachComponent<ReferenceEqualityDriver<IAssetProvider<Material>>>();
-                        equalityDriver.TargetReference.Target = assignedMaterialField.Reference;
-                        equalityDriver.Target.ForceLink(booleanReferenceDriver.State);
-
-                        // boolean ref driver drives this, which drives everything else
-                        var multiDriver = newMaterialHolder.AttachComponent<ReferenceMultiDriver<IAssetProvider<Material>>>();
-                        booleanReferenceDriver.TargetReference.ForceLink(multiDriver.Reference);
-
-                        // Makes material accessible elsewhere
-                        var dynMaterialVariable = newMaterialHolder.AttachComponent<DynamicReferenceVariable<IAssetProvider<Material>>>();
-                        dynMaterialVariable.VariableName.Value = $"Avatar/Statue.Material{oldMaterialToStatueMaterialMap.Count + 1}";
-
-                        // Drive that dynvar
-                        multiDriver.Drives.Add();
-                        multiDriver.Drives[0].ForceLink(dynMaterialVariable.Reference);
-
-                        oldMaterialToStatueMaterialMap.Add(material.ReferenceID, multiDriver);
+                        normalUniqueSlots.Add(smr.Slot.ReferenceID, smr.Slot);
                     }
+                });
 
-                    var drives = oldMaterialToStatueMaterialMap[material.ReferenceID].Drives;
-                    drives.Add().ForceLink(smr.Materials.GetElement(i));
-                    // Thanks Dann :)
-                }
-            });
+                this.LogString($"Found {normalUniqueSlots.Count} unique Slots to duplicate");
 
-
-            var normalMaterialHolder = materialHolder.AddSlot("Normal Materials");
-            var oldMaterialToNewNormalMaterialMap = new Dictionary<RefID, IAssetProvider<Material>>();
-            // Create alpha material and swap normal material for it
-            normalSkinnedMeshRenderers.ForEach((smr) =>
-            {
-                for (int i = 0; i < smr.Materials.Count; ++i)
+                // Duplicate each statue slot
+                var statueSlots = new List<Slot>();
+                normalUniqueSlots.ToList().ForEach((slot) =>
                 {
-                    var oldMaterial = smr.Materials[i];
+                    statueSlots.Add(slot.Value.Duplicate());
+                    statueSlots.Last().Name = slot.Value.Name + "_Statue";
+                });
 
-                    if (!oldMaterialToNewNormalMaterialMap.ContainsKey(oldMaterial.ReferenceID))
+                this.LogString($"Created {statueSlots.Count} statue slots");
+
+                // Get SMRs for each statue slot
+                var statueSkinnedMeshRenderers = new List<MeshRenderer>();
+                statueSlots.ForEach((slot) =>
+                {
+                    var smrs = slot.GetComponents<MeshRenderer>();
+                    statueSkinnedMeshRenderers.AddRange(smrs);
+                });
+
+                this.LogString($"Creating material drivers");
+                var driverSlot = avatarRootSlot.AddSlot(name: "Drivers");
+                // Oh lordy
+                // var materialDriversSlot = driverSlot.AddSlot("Materials");
+
+                // Materials:
+                // 1. For each material that needs to be created, create a driver and default material
+                // 2. For each old material, give it an appropriate blend mode
+
+                // Create a map of normal materials -> statue materials
+                var materialHolder = avatarRootSlot.AddSlot("Generated Materials");
+
+                var statueMaterialHolder = materialHolder.AddSlot("Statue Materials");
+
+
+
+                // Creating blinder material
+                {
+                    var blinderMaterialHolder = statueMaterialHolder.AddSlot("Statue 0");
+                    var blinderDefaultMaterial = blinderMaterialHolder.CopyComponent((AssetProvider<Material>)baseStatueMaterial);
+
+                    var blinderDynVar = blinderMaterialHolder.AttachComponent<DynamicReferenceVariable<IAssetProvider<Material>>>();
+                    blinderDynVar.VariableName.Value = "Avatar/Statue.Material0";
+                    blinderDynVar.Reference.Value = blinderDefaultMaterial.ReferenceID;
+                    // Assigns Statue.Material.Assigned to field
+                    var assignedMaterialDriver = blinderMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
+                    assignedMaterialDriver.VariableName.Value = "Avatar/Statue.Material.Assigned";
+
+                    // Stores assigned for Equality check
+                    var assignedMaterialField = blinderMaterialHolder.AttachComponent<ReferenceField<IAssetProvider<Material>>>();
+                    assignedMaterialDriver.Target.ForceLink(assignedMaterialField.Reference);
+
+                    // Assigns Statue.Material.Assigned to boolean
+                    var bassignedMaterialDriver = blinderMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
+                    bassignedMaterialDriver.VariableName.Value = "Avatar/Statue.Material.Assigned";
+
+                    // Decides whether we use default or assigned
+                    var booleanReferenceDriver = blinderMaterialHolder.AttachComponent<BooleanReferenceDriver<IAssetProvider<Material>>>();
+                    booleanReferenceDriver.TrueTarget.Value = blinderDefaultMaterial.ReferenceID;
+                    bassignedMaterialDriver.Target.ForceLink(booleanReferenceDriver.FalseTarget);
+
+                    // Checks if assigned material is null and writes that value to boolean ref driver
+                    var equalityDriver = blinderMaterialHolder.AttachComponent<ReferenceEqualityDriver<IAssetProvider<Material>>>();
+                    equalityDriver.TargetReference.Target = assignedMaterialField.Reference;
+                    equalityDriver.Target.ForceLink(booleanReferenceDriver.State);
+
+                    booleanReferenceDriver.TargetReference.ForceLink(blinderDynVar.Reference);
+                }
+
+
+                this.LogString($"Created blinder material");
+
+                // Create Material objects for each statue material
+                var oldMaterialToStatueMaterialMap = new Dictionary<RefID, ReferenceMultiDriver<IAssetProvider<Material>>>();
+                statueSkinnedMeshRenderers.ForEach((smr) =>
+                {
+                    for (int i = 0; i < smr.Materials.Count; ++i)
                     {
-                        var newSlot = normalMaterialHolder.AddSlot($"Normal {oldMaterialToNewNormalMaterialMap.Count}");
-                        var newMaterial = MaterialHelpers.CreateAlphaMaterial(oldMaterial, statueType, newSlot);
-                        oldMaterialToNewNormalMaterialMap[oldMaterial.ReferenceID] = newMaterial;
+                        var material = smr.Materials[i];
+
+                        if (!oldMaterialToStatueMaterialMap.ContainsKey(material.ReferenceID))
+                        {
+                            this.LogString($"Creating material {oldMaterialToStatueMaterialMap.Count + 1} as duplicate of {material.ReferenceID}");
+                            // If assigned == null, use default
+
+                            // Create a new statue material object (i.e. drives material slot on statue SMR, has default material with normal map)
+                            var newMaterialHolder = statueMaterialHolder.AddSlot($"Statue {oldMaterialToStatueMaterialMap.Count + 1}");
+                            var newDefaultMaterial = MaterialHelpers.CreateStatueMaterial(material, baseStatueMaterial, newMaterialHolder);
+
+                            // Assigns Statue.Material.Assigned to equality
+                            var assignedMaterialDriver = newMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
+                            assignedMaterialDriver.VariableName.Value = "Avatar/Statue.Material.Assigned";
+                            var assignedMaterialField = newMaterialHolder.AttachComponent<ReferenceField<IAssetProvider<Material>>>();
+                            assignedMaterialDriver.Target.ForceLink(assignedMaterialField.Reference);
+
+                            // Assigns Statue.Material.Assigned to boolean
+                            var bassignedMaterialDriver = newMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
+                            bassignedMaterialDriver.VariableName.Value = "Avatar/Statue.Material.Assigned";
+
+                            // Decides whether we use default or assigned
+                            var booleanReferenceDriver = newMaterialHolder.AttachComponent<BooleanReferenceDriver<IAssetProvider<Material>>>();
+                            booleanReferenceDriver.TrueTarget.Value = newDefaultMaterial.ReferenceID;
+                            bassignedMaterialDriver.Target.ForceLink(booleanReferenceDriver.FalseTarget);
+
+                            // Checks if assigned material is null and writes that value to boolean ref driver
+                            var equalityDriver = newMaterialHolder.AttachComponent<ReferenceEqualityDriver<IAssetProvider<Material>>>();
+                            equalityDriver.TargetReference.Target = assignedMaterialField.Reference;
+                            equalityDriver.Target.ForceLink(booleanReferenceDriver.State);
+
+                            // boolean ref driver drives this, which drives everything else
+                            var multiDriver = newMaterialHolder.AttachComponent<ReferenceMultiDriver<IAssetProvider<Material>>>();
+                            booleanReferenceDriver.TargetReference.ForceLink(multiDriver.Reference);
+
+                            // Makes material accessible elsewhere
+                            var dynMaterialVariable = newMaterialHolder.AttachComponent<DynamicReferenceVariable<IAssetProvider<Material>>>();
+                            dynMaterialVariable.VariableName.Value = $"Avatar/Statue.Material{oldMaterialToStatueMaterialMap.Count + 1}";
+
+                            // Drive that dynvar
+                            multiDriver.Drives.Add();
+                            multiDriver.Drives[0].ForceLink(dynMaterialVariable.Reference);
+
+                            oldMaterialToStatueMaterialMap.Add(material.ReferenceID, multiDriver);
+                        }
+                        else
+                        {
+                            this.LogString($"Material {i} was already created as {oldMaterialToStatueMaterialMap[material.ReferenceID].ReferenceID}");
+                        }
+
+                        var drives = oldMaterialToStatueMaterialMap[material.ReferenceID].Drives;
+                        drives.Add().ForceLink(smr.Materials.GetElement(i));
+                        // Thanks Dann :)
                     }
+                });
 
-                    smr.Materials[i] = oldMaterialToNewNormalMaterialMap[oldMaterial.ReferenceID];
-                }
-            });
-            scratchSpace.Debugstr("b");
+                this.LogString($"Converting original materials to transparent versions");
 
-            // TODO: Hygiene: Create parent slots for avatars
-
-            // Set up enabling drivers
-
-            var normalDriverSlot = driverSlot.AddSlot("Avatar/Statue.BodyNormal");
-            var normalVarReader = normalDriverSlot.AttachComponent<DynamicValueVariableDriver<bool>>();
-            var normalDriver = normalDriverSlot.AttachComponent<ValueMultiDriver<bool>>();
-
-            normalVarReader.VariableName.Value = "Avatar/Statue.BodyNormal";
-            normalVarReader.DefaultValue.Value = true;
-            normalVarReader.Target.Value = normalDriver.Value.ReferenceID;
-
-            //normalUniqueSlots.ToList().ForEach((slot) =>
-            //{
-            //    normalDriver.Drives.Add();
-            //    normalDriver.Drives[normalDriver.Drives.Count - 1].ForceLink(slot.Value.ActiveSelf_Field);
-            //});
-
-            scratchSpace.Debugstr("bb");
-            foreach (var smr in normalSkinnedMeshRenderers)
-            {
-                normalDriver.Drives.Add().ForceLink(smr.EnabledField);
-            }
-            scratchSpace.Debugstr("bc");
-
-
-            var statueDriverSlot = driverSlot.AddSlot("Avatar/Statue.BodyStatue");
-            var statueVarReader = statueDriverSlot.AttachComponent<DynamicValueVariableDriver<bool>>();
-            var statueDriver = statueDriverSlot.AttachComponent<ValueMultiDriver<bool>>();
-            scratchSpace.Debugstr("bd");
-
-            statueVarReader.VariableName.Value = "Avatar/Statue.BodyStatue";
-            statueVarReader.DefaultValue.Value = false;
-            statueVarReader.Target.Value = statueDriver.Value.ReferenceID;
-            scratchSpace.Debugstr("be");
-
-            //statueSlots.ToList().ForEach((slot) =>
-            //{
-            //    statueDriver.Drives.Add();
-            //    statueDriver.Drives[statueDriver.Drives.Count - 1].ForceLink(slot.ActiveSelf_Field);
-            //});
-
-            scratchSpace.Debugstr("bf");
-            foreach (var smr in statueSkinnedMeshRenderers)
-            {
-                statueDriver.Drives.Add().ForceLink(smr.EnabledField);
-            }
-
-            var disableOnFreezeDriverSlot = driverSlot.AddSlot("Avatar/Statue.DisableOnFreeze");
-            var dofVarReader = disableOnFreezeDriverSlot.AttachComponent<DynamicValueVariableDriver<bool>>();
-            var dofDriver = disableOnFreezeDriverSlot.AttachComponent<ValueMultiDriver<bool>>();
-
-            dofVarReader.VariableName.Value = "Avatar/Statue.DisableOnFreeze";
-            dofVarReader.DefaultValue.Value = true;
-            dofVarReader.Target.Value = dofDriver.Value.ReferenceID;
-
-            scratchSpace.Debugstr("bg");
-
-            AddFieldToMultidriver(dofDriver, avatarRootSlot.GetComponent<VRIK>().EnabledField);
-
-            var boneChainSlots = new Dictionary<RefID, Slot>();
-
-            avatarRootSlot.GetComponentsInChildren<DynamicBoneChain>().ForEach((dbc) =>
-            {
-                if (!boneChainSlots.ContainsKey(dbc.Slot.ReferenceID))
+                var normalMaterialHolder = materialHolder.AddSlot("Normal Materials");
+                var oldMaterialToNewNormalMaterialMap = new Dictionary<RefID, IAssetProvider<Material>>();
+                // Create alpha material and swap normal material for it
+                normalSkinnedMeshRenderers.ForEach((smr) =>
                 {
-                    boneChainSlots.Add(dbc.Slot.ReferenceID, dbc.Slot);
+                    for (int i = 0; i < smr.Materials.Count; ++i)
+                    {
+                        var oldMaterial = smr.Materials[i];
+
+                        if (!oldMaterialToNewNormalMaterialMap.ContainsKey(oldMaterial.ReferenceID))
+                        {
+                            this.LogString($"Creating material for {oldMaterial.ReferenceID}");
+                            var newSlot = normalMaterialHolder.AddSlot($"Normal {oldMaterialToNewNormalMaterialMap.Count}");
+                            var newMaterial = MaterialHelpers.CreateAlphaMaterial(oldMaterial, statueType, newSlot);
+                            oldMaterialToNewNormalMaterialMap[oldMaterial.ReferenceID] = newMaterial;
+                        }
+                        else
+                        {
+                            this.LogString($"Material {i} was already created as {oldMaterialToNewNormalMaterialMap[oldMaterial.ReferenceID].ReferenceID}");
+                        }
+
+                        smr.Materials[i] = oldMaterialToNewNormalMaterialMap[oldMaterial.ReferenceID];
+                    }
+                });
+
+                // TODO: Hygiene: Create parent slots for avatars
+
+                // Set up enabling drivers
+                this.LogString($"Creating drivers for enabling/disabling normal/statue bodies");
+
+                var normalDriverSlot = driverSlot.AddSlot("Avatar/Statue.BodyNormal");
+                var normalVarReader = normalDriverSlot.AttachComponent<DynamicValueVariableDriver<bool>>();
+                var normalDriver = normalDriverSlot.AttachComponent<ValueMultiDriver<bool>>();
+
+                normalVarReader.VariableName.Value = "Avatar/Statue.BodyNormal";
+                normalVarReader.DefaultValue.Value = true;
+                normalVarReader.Target.Value = normalDriver.Value.ReferenceID;
+
+                //normalUniqueSlots.ToList().ForEach((slot) =>
+                //{
+                //    normalDriver.Drives.Add();
+                //    normalDriver.Drives[normalDriver.Drives.Count - 1].ForceLink(slot.Value.ActiveSelf_Field);
+                //});
+
+                this.LogString($"Linking to BodyNormal");
+                foreach (var smr in normalSkinnedMeshRenderers)
+                {
+                    normalDriver.Drives.Add().ForceLink(smr.EnabledField);
                 }
-            });
-            scratchSpace.Debugstr("c");
+                this.LogString($"Linked {normalSkinnedMeshRenderers.Count} MeshRenderers");
 
-            boneChainSlots.ToList().ForEach((dbcSlot) => AddFieldToMultidriver(dofDriver, dbcSlot.Value.ActiveSelf_Field));
+                var statueDriverSlot = driverSlot.AddSlot("Avatar/Statue.BodyStatue");
+                var statueVarReader = statueDriverSlot.AttachComponent<DynamicValueVariableDriver<bool>>();
+                var statueDriver = statueDriverSlot.AttachComponent<ValueMultiDriver<bool>>();
 
-            // TODO: copy blendshapes to statue from normal
-            AddFieldToMultidriver(dofDriver, avatarRootSlot.GetComponentInChildren<VisemeAnalyzer>().EnabledField);
+                statueVarReader.VariableName.Value = "Avatar/Statue.BodyStatue";
+                statueVarReader.DefaultValue.Value = false;
+                statueVarReader.Target.Value = statueDriver.Value.ReferenceID;
 
-            avatarRootSlot.GetComponentsInChildren<AvatarExpressionDriver>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
+                //statueSlots.ToList().ForEach((slot) =>
+                //{
+                //    statueDriver.Drives.Add();
+                //    statueDriver.Drives[statueDriver.Drives.Count - 1].ForceLink(slot.ActiveSelf_Field);
+                //});
 
-            avatarRootSlot.GetComponentsInChildren<DirectVisemeDriver>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
+                this.LogString($"Linking to BodyStatue");
+                foreach (var smr in statueSkinnedMeshRenderers)
+                {
+                    statueDriver.Drives.Add().ForceLink(smr.EnabledField);
+                }
+                this.LogString($"Linked {statueSkinnedMeshRenderers.Count} MeshRenderers");
 
-            // TODO: Disable animation systems (Wigglers, Panners, etc.)
-            avatarRootSlot.GetComponentsInChildren<Wiggler>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            avatarRootSlot.GetComponentsInChildren<Panner1D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            avatarRootSlot.GetComponentsInChildren<Panner2D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            avatarRootSlot.GetComponentsInChildren<Panner3D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            avatarRootSlot.GetComponentsInChildren<Panner4D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            avatarRootSlot.GetComponentsInChildren<Wobbler1D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            avatarRootSlot.GetComponentsInChildren<Wobbler2D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            avatarRootSlot.GetComponentsInChildren<Wobbler3D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            avatarRootSlot.GetComponentsInChildren<Wobbler4D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
+                var disableOnFreezeDriverSlot = driverSlot.AddSlot("Avatar/Statue.DisableOnFreeze");
+                var dofVarReader = disableOnFreezeDriverSlot.AttachComponent<DynamicValueVariableDriver<bool>>();
+                var dofDriver = disableOnFreezeDriverSlot.AttachComponent<ValueMultiDriver<bool>>();
 
-            avatarRootSlot.GetComponentsInChildren<HandPoser>().ForEach((hp) =>
-            {
-                AddFieldToMultidriver(dofDriver, hp.EnabledField);
-            });
+                dofVarReader.VariableName.Value = "Avatar/Statue.DisableOnFreeze";
+                dofVarReader.DefaultValue.Value = true;
+                dofVarReader.Target.Value = dofDriver.Value.ReferenceID;
 
-            avatarRootSlot.GetComponentsInChildren<EyeManager>().ForEach((em) =>
-            {
-                AddFieldToMultidriver(dofDriver, em.Slot.ActiveSelf_Field);
-            });
+                this.LogString($"Driving VRIK");
 
-            avatarRootSlot.GetComponentsInChildren<AvatarToolAnchor>().ForEach((em) =>
-            {
-                AddFieldToMultidriver(dofDriver, em.Slot.ActiveSelf_Field);
-            });
+                AddFieldToMultidriver(dofDriver, avatarRootSlot.GetComponent<VRIK>().EnabledField);
 
-            // Detect any name badges
-            var nameBadges = avatarRootSlot.GetComponentsInChildren<AvatarNameTagAssigner>().Select((anta) => anta.Slot);
-            foreach (var nameBadge in nameBadges)
-            {
-                var newParent = nameBadge.Parent.AddSlot("Name Badge Parent (Statufication)");
-                nameBadge.SetParent(newParent, true);
-                AddFieldToMultidriver(dofDriver, newParent.ActiveSelf_Field);
+                this.LogString($"Searching for bones to drive");
+                var boneChainSlots = new Dictionary<RefID, Slot>();
+
+                avatarRootSlot.GetComponentsInChildren<DynamicBoneChain>().ForEach((dbc) =>
+                {
+                    if (!boneChainSlots.ContainsKey(dbc.Slot.ReferenceID))
+                    {
+                        boneChainSlots.Add(dbc.Slot.ReferenceID, dbc.Slot);
+                    }
+                });
+
+                boneChainSlots.ToList().ForEach((dbcSlot) => AddFieldToMultidriver(dofDriver, dbcSlot.Value.ActiveSelf_Field));
+
+                this.LogString($"Added {boneChainSlots.Count} bones");
+
+                // TODO: copy blendshapes to statue from normal
+                AddFieldToMultidriver(dofDriver, avatarRootSlot.GetComponentInChildren<VisemeAnalyzer>().EnabledField);
+
+                avatarRootSlot.GetComponentsInChildren<AvatarExpressionDriver>().ForEach((aed) =>
+                {
+                    AddFieldToMultidriver(dofDriver, aed.EnabledField);
+                });
+
+                avatarRootSlot.GetComponentsInChildren<DirectVisemeDriver>().ForEach((aed) =>
+                {
+                    AddFieldToMultidriver(dofDriver, aed.EnabledField);
+                });
+
+                // TODO: Disable animation systems (Wigglers, Panners, etc.)
+                avatarRootSlot.GetComponentsInChildren<Wiggler>().ForEach((aed) =>
+                {
+                    AddFieldToMultidriver(dofDriver, aed.EnabledField);
+                });
+                avatarRootSlot.GetComponentsInChildren<Panner1D>().ForEach((aed) =>
+                {
+                    AddFieldToMultidriver(dofDriver, aed.EnabledField);
+                });
+                avatarRootSlot.GetComponentsInChildren<Panner2D>().ForEach((aed) =>
+                {
+                    AddFieldToMultidriver(dofDriver, aed.EnabledField);
+                });
+                avatarRootSlot.GetComponentsInChildren<Panner3D>().ForEach((aed) =>
+                {
+                    AddFieldToMultidriver(dofDriver, aed.EnabledField);
+                });
+                avatarRootSlot.GetComponentsInChildren<Panner4D>().ForEach((aed) =>
+                {
+                    AddFieldToMultidriver(dofDriver, aed.EnabledField);
+                });
+                avatarRootSlot.GetComponentsInChildren<Wobbler1D>().ForEach((aed) =>
+                {
+                    AddFieldToMultidriver(dofDriver, aed.EnabledField);
+                });
+                avatarRootSlot.GetComponentsInChildren<Wobbler2D>().ForEach((aed) =>
+                {
+                    AddFieldToMultidriver(dofDriver, aed.EnabledField);
+                });
+                avatarRootSlot.GetComponentsInChildren<Wobbler3D>().ForEach((aed) =>
+                {
+                    AddFieldToMultidriver(dofDriver, aed.EnabledField);
+                });
+                avatarRootSlot.GetComponentsInChildren<Wobbler4D>().ForEach((aed) =>
+                {
+                    AddFieldToMultidriver(dofDriver, aed.EnabledField);
+                });
+
+                avatarRootSlot.GetComponentsInChildren<HandPoser>().ForEach((hp) =>
+                {
+                    AddFieldToMultidriver(dofDriver, hp.EnabledField);
+                });
+
+                avatarRootSlot.GetComponentsInChildren<EyeManager>().ForEach((em) =>
+                {
+                    AddFieldToMultidriver(dofDriver, em.Slot.ActiveSelf_Field);
+                });
+
+                avatarRootSlot.GetComponentsInChildren<AvatarToolAnchor>().ForEach((em) =>
+                {
+                    AddFieldToMultidriver(dofDriver, em.Slot.ActiveSelf_Field);
+                });
+
+                // Detect any name badges
+                var nameBadges = avatarRootSlot.GetComponentsInChildren<AvatarNameTagAssigner>().Select((anta) => anta.Slot);
+                foreach (var nameBadge in nameBadges)
+                {
+                    var newParent = nameBadge.Parent.AddSlot("Name Badge Parent (Statufication)");
+                    nameBadge.SetParent(newParent, true);
+                    AddFieldToMultidriver(dofDriver, newParent.ActiveSelf_Field);
+                    this.LogString($"Driving namebadge {nameBadge.Name}/{nameBadge.ReferenceID}");
+                }
+
+                this.LogString($"Driving WhisperVolume");
+                var whisperVolSlot = driverSlot.AddSlot("Avatar/Statue.WhisperVolume");
+                var whisperDriver = whisperVolSlot.AttachComponent<DynamicValueVariableDriver<float>>();
+                whisperDriver.DefaultValue.Value = 0.75f;
+                whisperDriver.VariableName.Value = "Avatar/Statue.WhisperVolume";
+                whisperDriver.Target.Value = avatarRootSlot.GetComponentInChildren<AvatarAudioOutputManager>().WhisperConfig.Volume.ReferenceID;
+
+                this.LogString($"Driving Voice and Shout");
+                var voiceVolSlot = driverSlot.AddSlot("Avatar/Statue.VoiceVolume");
+                var voiceDriver = voiceVolSlot.AttachComponent<DynamicValueVariableDriver<float>>();
+                var shoutDriver = voiceVolSlot.AttachComponent<DynamicValueVariableDriver<float>>();
+                voiceDriver.DefaultValue.Value = 1.0f;
+                voiceDriver.VariableName.Value = "Avatar/Statue.VoiceVolume";
+                voiceDriver.Target.Value = avatarRootSlot.GetComponentInChildren<AvatarAudioOutputManager>().NormalConfig.Volume.ReferenceID;
+                shoutDriver.DefaultValue.Value = 1.0f;
+                shoutDriver.VariableName.Value = "Avatar/Statue.VoiceVolume";
+                shoutDriver.Target.Value = avatarRootSlot.GetComponentInChildren<AvatarAudioOutputManager>().ShoutConfig.Volume.ReferenceID;
+                //TODO: maybe other voice configs
+
+                scratchSpace.Destroy();
+
+                this.LogString($"Setup completed successfully!");
             }
 
-            var whisperVolSlot = driverSlot.AddSlot("Avatar/Statue.WhisperVolume");
-            var whisperDriver = whisperVolSlot.AttachComponent<DynamicValueVariableDriver<float>>();
-            whisperDriver.DefaultValue.Value = 0.75f;
-            whisperDriver.VariableName.Value = "Avatar/Statue.WhisperVolume";
-            whisperDriver.Target.Value = avatarRootSlot.GetComponentInChildren<AvatarAudioOutputManager>().WhisperConfig.Volume.ReferenceID;
-
-            var voiceVolSlot = driverSlot.AddSlot("Avatar/Statue.VoiceVolume");
-            var voiceDriver = voiceVolSlot.AttachComponent<DynamicValueVariableDriver<float>>();
-            var shoutDriver = voiceVolSlot.AttachComponent<DynamicValueVariableDriver<float>>();
-            voiceDriver.DefaultValue.Value = 1.0f;
-            voiceDriver.VariableName.Value = "Avatar/Statue.VoiceVolume";
-            voiceDriver.Target.Value = avatarRootSlot.GetComponentInChildren<AvatarAudioOutputManager>().NormalConfig.Volume.ReferenceID;
-            shoutDriver.DefaultValue.Value = 1.0f;
-            shoutDriver.VariableName.Value = "Avatar/Statue.VoiceVolume";
-            shoutDriver.Target.Value = avatarRootSlot.GetComponentInChildren<AvatarAudioOutputManager>().ShoutConfig.Volume.ReferenceID;
-            //TODO: maybe other voice configs
-
-            scratchSpace.Debugstr("d");
-
-            scratchSpace.Destroy();
-        }
-
-        public static Slot SpawnSlot(Slot x, string file, World world, float3 position, float3 scale)
-        {
-            DataTreeDictionary loadNode = DataTreeConverter.Load(file);
-
-            Slot slot = x.AddSlot("SpawnSlotObject");
-            slot.CreateSpawnUndoPoint();
-            slot.LoadObject(loadNode);
-            slot.GlobalPosition = position;
-            slot.GlobalScale = scale;
-
-            return slot;
-        }
-
-        public static Slot GetSlotThing(Slot x, CloudValueVariable<string> uriVariable)
-        {
-            // Yoinked from FrooxEngine.FileMetadata.OnImportFile
-            var fileName = uriVariable.Value.Value;
-            var fileUri = new Uri(fileName);
-
-            var file = x.Engine.AssetManager.GatherAsset(fileUri, 4.0f).GetAwaiter().GetResult().GetFile().GetAwaiter().GetResult();
-
-            if (file != null)
+            public Slot SpawnSlot(Slot x, string file, World world, float3 position, float3 scale)
             {
-                x.LocalUser.GetPointInFrontOfUser(out var point, out var rotation, float3.Backward);
+                DataTreeDictionary loadNode = DataTreeConverter.Load(file);
 
-                return SpawnSlot(x, file, x.World, point, new float3(1.0f, 1.0f, 1.0f));
+                Slot slot = x.AddSlot("SpawnSlotObject");
+                slot.CreateSpawnUndoPoint();
+                slot.LoadObject(loadNode);
+                slot.GlobalPosition = position;
+                slot.GlobalScale = scale;
+
+                return slot.Children.First();
             }
-            else
+
+            public Slot GetStatueSystem(Slot x, CloudValueVariable<string> uriVariable)
             {
-                return x.AddSlot("File was null after RequestGather");
+                if (this.statueSystemFallback.Reference.Value != RefID.Null)
+                {
+                    this.LogString("Using statue system override from RefID " + this.statueSystemFallback.Reference.Value);
+
+                    return this.statueSystemFallback.Reference.Target.Duplicate(x);
+                }
+                else
+                {
+                    this.LogString("Getting statue system from cloud");
+                    // Yoinked from FrooxEngine.FileMetadata.OnImportFile
+                    var fileName = uriVariable.Value.Value;
+                    var fileUri = new Uri(fileName);
+
+                    var record = x.Engine.RecordManager.FetchRecord(fileUri).GetAwaiter().GetResult();
+
+                    this.LogString("Got Record " + record.ToString());
+                    this.LogString("Fetching from " + record.Entity.AssetURI);
+
+                    string fileData = x.Engine.AssetManager.GatherAssetFile(new Uri(record.Entity.AssetURI), 100.0f).GetAwaiter().GetResult();
+                    
+                    Msg(fileUri);
+                    Msg(fileData);
+
+                    if (fileData != null)
+                    {
+                        x.LocalUser.GetPointInFrontOfUser(out var point, out var rotation, float3.Backward);
+
+                        this.LogString("Got file successfully");
+
+                        return SpawnSlot(x, fileData, x.World, point, new float3(1.0f, 1.0f, 1.0f));
+                    }
+                    else
+                    {
+                        this.LogString("ERROR: File was null after RequestGather");
+
+                        return x.AddSlot("File was null after RequestGather");
+                    }
+                }
+            }
+
+            private void AddFieldToMultidriver<T>(ValueMultiDriver<T> driver, Sync<T> field)
+            {
+                driver.Drives.Add();
+                driver.Drives[driver.Drives.Count - 1].ForceLink(field);
             }
         }
 
-        private static void AddFieldToMultidriver<T>(ValueMultiDriver<T> driver, Sync<T> field)
-        {
-            driver.Drives.Add();
-            driver.Drives[driver.Drives.Count - 1].ForceLink(field);
-        }
         /*
         [HarmonyPatch(typeof(DynamicImpulseTriggerWithValue<IAssetProvider<Material>>), nameof(DynamicImpulseTriggerWithValue<IAssetProvider<Material>>.Run))]
         public class Patch
