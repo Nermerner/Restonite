@@ -56,6 +56,7 @@ namespace Restonite
         {
             Slot WizardSlot;
             Text debugText;
+            Checkbox skinnedMeshRenderersOnly;
 
             readonly ReferenceField<Slot> avatarRoot;
             readonly ReferenceField<Slot> statueSystemFallback;
@@ -64,7 +65,7 @@ namespace Restonite
 
             readonly ReferenceField<IAssetProvider<Material>> baseStatueMaterial;
 
-            readonly ReferenceMultiplexer<MeshRenderer> foundSkinnedMeshRenderers;
+            readonly ReferenceMultiplexer<MeshRenderer> foundMeshRenderers;
 
             readonly CloudValueVariable<string> uriVariable;
 
@@ -107,8 +108,8 @@ namespace Restonite
                 statueSystemFallback = Data.AddSlot("statueSystemFallback").AttachComponent<ReferenceField<Slot>>();
                 baseStatueMaterial = Data.AddSlot("baseMaterial").AttachComponent<ReferenceField<IAssetProvider<Material>>>();
                 statueType = Data.AddSlot("statueType").AttachComponent<ValueField<int>>();
-                foundSkinnedMeshRenderers = Data.AddSlot("foundMRs").AttachComponent<ReferenceMultiplexer<MeshRenderer>>();
-                
+                foundMeshRenderers = Data.AddSlot("foundMRs").AttachComponent<ReferenceMultiplexer<MeshRenderer>>();
+
                 /*
                 - Add avatar space
                 - Add statue system objects
@@ -154,14 +155,23 @@ namespace Restonite
                 VerticalLayout verticalLayout = UI.VerticalLayout(4f, childAlignment: Alignment.TopLeft);
                 verticalLayout.ForceExpandHeight.Value = true;
 
+                skinnedMeshRenderersOnly = UI.HorizontalElementWithLabel("Skinned Meshes only", 0.9f, () => UI.Checkbox("Skinned Meshes only", true));
+
                 UI.Text("Avatar Root Slot:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
                 UI.Next("Avatar Root Slot");
                 var avatarField = UI.Current.AttachComponent<RefEditor>();
                 avatarField.Setup(avatarRoot.Reference);
                 avatarRoot.Reference.OnValueChange += (field) =>
                 {
-                    foundSkinnedMeshRenderers.References.Clear();
-                    foundSkinnedMeshRenderers.References.AddRange(avatarRoot.Reference.Target.GetComponentsInChildren<MeshRenderer>());
+                    foundMeshRenderers.References.Clear();
+                    if (skinnedMeshRenderersOnly.State.Value)
+                    {
+                        foundMeshRenderers.References.AddRange(avatarRoot.Reference.Target.GetComponentsInChildren<SkinnedMeshRenderer>());
+                    }
+                    else
+                    {
+                        foundMeshRenderers.References.AddRange(avatarRoot.Reference.Target.GetComponentsInChildren<MeshRenderer>());
+                    }
                 };
 
                 UI.Text("Default statue material:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
@@ -199,7 +209,7 @@ namespace Restonite
                 UI.ScrollArea();
                 UI.FitContent(SizeFit.Disabled, SizeFit.PreferredSize);
 
-                SyncMemberEditorBuilder.Build(foundSkinnedMeshRenderers.References, "Skinned Mesh Renderers found", null, UI);
+                SyncMemberEditorBuilder.Build(foundMeshRenderers.References, "Skinned Mesh Renderers found", null, UI);
 
                 WizardSlot.PositionInFrontOfUser(float3.Backward, distance: 1f);
             }
@@ -209,7 +219,7 @@ namespace Restonite
                 var scratchSpace = WizardSlot.AddSlot("Scratch space");
                 try
                 {
-                    InstallSystemOnAvatar(avatarRoot.Reference.Target, scratchSpace, uriVariable, foundSkinnedMeshRenderers.References.ToList(), baseStatueMaterial.Reference.Target, (StatueType)statueType.Value.Value);
+                    InstallSystemOnAvatar(avatarRoot.Reference.Target, scratchSpace, uriVariable, foundMeshRenderers.References.ToList(), baseStatueMaterial.Reference.Target, (StatueType)statueType.Value.Value);
                     HighlightHelper.FlashHighlight(avatarRoot.Reference.Target, (_a) => true, new colorX(0.5f, 0.5f, 0.5f, 1.0f));
                 }
                 catch (Exception ex)
@@ -258,7 +268,7 @@ namespace Restonite
                     childSlot.Duplicate(avatarRootSlot);
                 });
 
-                this.LogString($"Found {this.foundSkinnedMeshRenderers} MeshRenderers");
+                this.LogString($"Found {this.foundMeshRenderers} MeshRenderers");
 
                 // Find unique slots to duplicate
                 var normalUniqueSlots = new Dictionary<RefID, Slot>();
@@ -592,13 +602,16 @@ namespace Restonite
                 var voiceVolSlot = driverSlot.AddSlot("Avatar/Statue.VoiceVolume");
                 var voiceDriver = voiceVolSlot.AttachComponent<DynamicValueVariableDriver<float>>();
                 var shoutDriver = voiceVolSlot.AttachComponent<DynamicValueVariableDriver<float>>();
+                var broadcastDriver = voiceVolSlot.AttachComponent<DynamicValueVariableDriver<float>>();
                 voiceDriver.DefaultValue.Value = 1.0f;
                 voiceDriver.VariableName.Value = "Avatar/Statue.VoiceVolume";
                 voiceDriver.Target.Value = avatarRootSlot.GetComponentInChildren<AvatarAudioOutputManager>().NormalConfig.Volume.ReferenceID;
                 shoutDriver.DefaultValue.Value = 1.0f;
                 shoutDriver.VariableName.Value = "Avatar/Statue.VoiceVolume";
                 shoutDriver.Target.Value = avatarRootSlot.GetComponentInChildren<AvatarAudioOutputManager>().ShoutConfig.Volume.ReferenceID;
-                //TODO: maybe other voice configs
+                broadcastDriver.DefaultValue.Value = 1.0f;
+                broadcastDriver.VariableName.Value = "Avatar/Statue.VoiceVolume";
+                broadcastDriver.Target.Value = avatarRootSlot.GetComponentInChildren<AvatarAudioOutputManager>().BroadcastConfig.Volume.ReferenceID;
 
                 scratchSpace.Destroy();
 
