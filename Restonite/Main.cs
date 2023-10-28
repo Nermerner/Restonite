@@ -576,9 +576,12 @@ namespace Restonite
                     AddFieldToMultidriver(dofDriver, em.Slot.ActiveSelf_Field);
                 });
 
-                avatarRootSlot.GetComponentsInChildren<AvatarToolAnchor>().ForEach((em) =>
+                avatarRootSlot.GetComponentsInChildren<AvatarToolAnchor>().ForEach((ata) =>
                 {
-                    AddFieldToMultidriver(dofDriver, em.Slot.ActiveSelf_Field);
+                    if (ata.AnchorPoint.Value == AvatarToolAnchor.Point.Toolshelf)
+                    {
+                        AddFieldToMultidriver(dofDriver, ata.Slot.ActiveSelf_Field);
+                    }
                 });
 
                 // Detect any name badges
