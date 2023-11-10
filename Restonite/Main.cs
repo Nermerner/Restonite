@@ -295,13 +295,14 @@ namespace Restonite
 
                 // Add statue system objects
                 var systemSlot = GetStatueSystem(scratchSpace, uriVariable);
+                var statueRootSloot = avatarRootSlot.AddSlot("Statue");
 
                 this.LogInfo("Duplicating slots onto Avatar Root");
 
                 systemSlot.GetChildrenWithTag("CopyToStatue").ForEach((childSlot) =>
                 {
                     this.LogInfo($"Adding {childSlot.Name} with tag {childSlot.Tag}");
-                    childSlot.Duplicate(avatarRootSlot);
+                    childSlot.Duplicate(statueRootSloot);
                 });
 
                 this.LogInfo($"Found {this.foundMeshRenderers} MeshRenderers");
@@ -337,7 +338,7 @@ namespace Restonite
                 });
 
                 this.LogInfo($"Creating material drivers");
-                var driverSlot = avatarRootSlot.AddSlot(name: "Drivers");
+                var driverSlot = statueRootSloot.AddSlot(name: "Drivers");
                 // Oh lordy
                 // var materialDriversSlot = driverSlot.AddSlot("Materials");
 
@@ -346,7 +347,7 @@ namespace Restonite
                 // 2. For each old material, give it an appropriate blend mode
 
                 // Create a map of normal materials -> statue materials
-                var materialHolder = avatarRootSlot.AddSlot("Generated Materials");
+                var materialHolder = statueRootSloot.AddSlot("Generated Materials");
 
                 var statueMaterialHolder = materialHolder.AddSlot("Statue Materials");
 
