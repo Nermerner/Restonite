@@ -305,7 +305,7 @@ namespace Restonite
                     childSlot.Duplicate(statueRootSloot);
                 });
 
-                this.LogInfo($"Found {this.foundMeshRenderers} MeshRenderers");
+                this.LogInfo($"Found {this.foundMeshRenderers.References.Count} MeshRenderers");
 
                 // Find unique slots to duplicate
                 var normalUniqueSlots = new Dictionary<RefID, Slot>();
