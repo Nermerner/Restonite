@@ -320,22 +320,22 @@ namespace Restonite
                 this.LogInfo($"Found {normalUniqueSlots.Count} unique Slots to duplicate");
 
                 // Duplicate each statue slot
-                var statueSlots = new List<Slot>();
+                var statueSlots = new Dictionary<Slot, Slot>();
                 normalUniqueSlots.ToList().ForEach((slot) =>
                 {
-                    statueSlots.Add(slot.Value.Duplicate());
-                    statueSlots.Last().Name = slot.Value.Name + "_Statue";
+                    statueSlots.Add(slot.Value, slot.Value.Duplicate());
+                    statueSlots.Last().Value.Name = slot.Value.Name + "_Statue";
                 });
 
                 this.LogInfo($"Created {statueSlots.Count} statue slots");
 
                 // Get SMRs for each statue slot
                 var statueSkinnedMeshRenderers = new List<MeshRenderer>();
-                statueSlots.ForEach((slot) =>
+                foreach (var slot in statueSlots)
                 {
-                    var smrs = slot.GetComponents<MeshRenderer>();
+                    var smrs = slot.Value.GetComponents<MeshRenderer>();
                     statueSkinnedMeshRenderers.AddRange(smrs);
-                });
+                }
 
                 this.LogInfo($"Creating material drivers");
                 var driverSlot = statueRootSloot.AddSlot(name: "Drivers");
@@ -480,6 +480,56 @@ namespace Restonite
 
                 // TODO: Hygiene: Create parent slots for avatars
 
+                this.LogInfo("Creating drivers between normal/statue meshes and blend shapes");
+                var statueSyncMeshes = driverSlot.AddSlot("Meshes");
+                var statueSyncBlendshapes = driverSlot.AddSlot("Blend Shapes");
+
+                foreach (var slot in statueSlots)
+                {
+                    // Remove any DirectVisemeDrivers from statue slots as these will be driven by ValueCopys
+                    var visemeDriver = slot.Value.GetComponent<DirectVisemeDriver>();
+                    if (visemeDriver != null)
+                    {
+                        slot.Value.RemoveComponent(visemeDriver);
+                        this.LogInfo(string.Format("Removed DirectVisemeDriver on {0}", slot.Value.Name));
+                    }
+
+                    var blendshapeDrivers = statueSyncBlendshapes.AddSlot(slot.Key.Name);
+
+                    // Since statue is duplicated from normal it is assumed there's the same number of SMRs
+                    var normalSmrs = slot.Key.GetComponents<SkinnedMeshRenderer>();
+                    var statueSmrs = slot.Value.GetComponents<SkinnedMeshRenderer>();
+
+                    // Set up link between normal mesh and statue mesh
+                    var meshCopy = statueSyncMeshes.AttachComponent<ValueCopy<bool>>();
+                    meshCopy.Source.Value = slot.Key.ActiveSelf_Field.ReferenceID;
+                    meshCopy.Target.Value = slot.Value.ActiveSelf_Field.ReferenceID;
+
+                    for (var i = 0; i < normalSmrs.Count; i++)
+                    {
+                        var count = 0;
+                        for (var j = 0; j < normalSmrs[i].BlendShapeCount; j++)
+                        {
+                            var normalBlendshapeName = normalSmrs[i].BlendShapeName(j);
+                            var statueBlendshapeName = statueSmrs[i].BlendShapeName(j);
+                            var normalBlendshape = normalSmrs[i].GetBlendShape(normalBlendshapeName);
+                            var statueBlendshape = statueSmrs[i].GetBlendShape(statueBlendshapeName);
+
+                            // Only ValueCopy driven blendshapes
+                            if (normalBlendshapeName == statueBlendshapeName && normalBlendshape?.IsDriven == true && statueBlendshape != null)
+                            {
+                                var valueCopy = blendshapeDrivers.AttachComponent<ValueCopy<float>>();
+                                valueCopy.Source.Value = normalBlendshape.ReferenceID;
+                                valueCopy.Target.Value = statueBlendshape.ReferenceID;
+
+                                count++;
+                            }
+                        }
+
+                        this.LogInfo(string.Format("Linked {0} blend shapes for {1}", count, slot.Key.Name));
+                    }
+                }
+
                 // Set up enabling drivers
                 this.LogInfo($"Creating drivers for enabling/disabling normal/statue bodies");
 
@@ -552,7 +602,6 @@ namespace Restonite
 
                 this.LogInfo($"Added {boneChainSlots.Count} bones");
 
-                // TODO: copy blendshapes to statue from normal
                 AddFieldToMultidriver(dofDriver, avatarRootSlot.GetComponentInChildren<VisemeAnalyzer>().EnabledField);
 
                 avatarRootSlot.GetComponentsInChildren<AvatarExpressionDriver>().ForEach((aed) =>
