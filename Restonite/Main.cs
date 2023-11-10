@@ -221,13 +221,25 @@ namespace Restonite
 
                 UI.NestInto(bottom);
 
-                UI.Text("Log");
-                UI.ScrollArea();
+                UI.SplitVertically(0.06f, out RectTransform logTop, out RectTransform logBottom);
 
-                debugText = UI.Text("");
+                UI.NestInto(logTop);
+                var logTitle = UI.Text((LocaleString)"Log", true, new Alignment?(), true, null);
+                logTitle.HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                logTitle.VerticalAlign.Value = TextVerticalAlignment.Top;
+
+                UI.NestInto(logBottom);
+                UI.ScrollArea();
+                UI.FitContent(SizeFit.Disabled, SizeFit.MinSize);
+                UI.VerticalLayout();
+
+                debugText = UI.Text((LocaleString)"", false, new Alignment?(), true, null);
                 debugText.HorizontalAlign.Value = TextHorizontalAlignment.Left;
                 debugText.VerticalAlign.Value = TextVerticalAlignment.Top;
-                debugText.Size.Value = 22.0f;
+                debugText.Size.Value = 10f;
+                debugText.VerticalAutoSize.Value = false;
+                debugText.HorizontalAutoSize.Value = false;
+                debugText.Slot.RemoveComponent(debugText.Slot.GetComponent<LayoutElement>());
 
                 UI.NestInto(right);
                 UI.ScrollArea();
