@@ -671,13 +671,20 @@ namespace Restonite
                 });
 
                 // Detect any name badges
-                var nameBadges = avatarRootSlot.GetComponentsInChildren<AvatarNameTagAssigner>().Select((anta) => anta.Slot);
-                foreach (var nameBadge in nameBadges)
+                var nameBadges = avatarRootSlot.GetComponentsInChildren<AvatarNameTagAssigner>().Select((anta) => anta.Slot).ToList();
+                if (nameBadges.Count > 0)
                 {
-                    var newParent = nameBadge.Parent.AddSlot("Name Badge Parent (Statufication)");
-                    nameBadge.SetParent(newParent, true);
-                    AddFieldToMultidriver(dofDriver, newParent.ActiveSelf_Field);
-                    this.LogInfo($"Driving namebadge {nameBadge.Name}/{nameBadge.ReferenceID}");
+                    foreach (var nameBadge in nameBadges)
+                    {
+                        var newParent = nameBadge.Parent.AddSlot("Name Badge Parent (Statufication)");
+                        nameBadge.SetParent(newParent, true);
+                        AddFieldToMultidriver(dofDriver, newParent.ActiveSelf_Field);
+                        this.LogInfo($"Driving name badge {nameBadge.Name}/{nameBadge.ReferenceID}");
+                    }
+                }
+                else
+                {
+                    this.LogWarn("No custom name badge found, name will be visible upon statufication");
                 }
 
                 this.LogInfo($"Driving WhisperVolume");
