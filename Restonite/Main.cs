@@ -309,13 +309,22 @@ namespace Restonite
 
                 // Find unique slots to duplicate
                 var normalUniqueSlots = new Dictionary<RefID, Slot>();
-                normalSkinnedMeshRenderers.ForEach((smr) =>
+                foreach (var smr in normalSkinnedMeshRenderers)
                 {
                     if (!normalUniqueSlots.ContainsKey(smr.Slot.ReferenceID))
                     {
                         normalUniqueSlots.Add(smr.Slot.ReferenceID, smr.Slot);
+
+                        var smrsInChildren = smr.Slot.GetComponentsInChildren<MeshRenderer>();
+                        if (smrsInChildren.Any(x => x != smr))
+                        {
+                            this.LogError($"Slot {smr.Slot.Name} has nested MeshRenderers, aborting");
+                            statueRootSloot.Destroy();
+                            scratchSpace.Destroy();
+                            return;
+                        }
                     }
-                });
+                }
 
                 this.LogInfo($"Found {normalUniqueSlots.Count} unique Slots to duplicate");
 
