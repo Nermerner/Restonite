@@ -1,4 +1,4 @@
-﻿using FrooxEngine.CommonAvatar;
+using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
 using FrooxEngine.UIX;
 using FrooxEngine;
@@ -74,10 +74,34 @@ namespace Restonite
                 return new StatueSystemWizard(x);
             }
 
-            public void LogString(string logMessage)
+            public void LogDebug(string logMessage)
             {
                 Msg(logMessage);
-                this.debugText.Content.Value = $"{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{this.debugText?.Content?.Value ?? ""}";
+                this.debugText.Content.Value = $"<color=gray>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{this.debugText?.Content?.Value ?? ""}";
+            }
+
+            public void LogInfo(string logMessage)
+            {
+                Msg(logMessage);
+                this.debugText.Content.Value = $"<color=black>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{this.debugText?.Content?.Value ?? ""}";
+            }
+
+            public void LogWarn(string logMessage)
+            {
+                Msg(logMessage);
+                this.debugText.Content.Value = $"<color=yellow>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{this.debugText?.Content?.Value ?? ""}";
+            }
+
+            public void LogError(string logMessage)
+            {
+                Msg(logMessage);
+                this.debugText.Content.Value = $"<color=red>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{this.debugText?.Content?.Value ?? ""}";
+            }
+
+            public void LogSuccess(string logMessage)
+            {
+                Msg(logMessage);
+                this.debugText.Content.Value = $"<color=green>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{this.debugText?.Content?.Value ?? ""}";
             }
 
             StatueSystemWizard(Slot x)
@@ -225,8 +249,8 @@ namespace Restonite
                 catch (Exception ex)
                 {
                     var errorString = $"ERROR: Encountered exception during install: {ex.Message} / {ex}";
-                    this.LogString(errorString);
-                    this.LogString("ERROR: Sorry! We ran into an error installing the statue system.<br>Debugging information has been copied to your clipboard; please send it to the Statue devs!<br>(Arion, Azavit, Nermerner)");
+                    this.LogError(errorString);
+                    this.LogError("ERROR: Sorry! We ran into an error installing the statue system.<br>Debugging information has been copied to your clipboard; please send it to the Statue devs!<br>(Arion, Azavit, Nermerner)");
                     Engine.Current.InputInterface.Clipboard.SetText(this.debugText.Content.Value);
                 }
             }
@@ -239,7 +263,7 @@ namespace Restonite
             IAssetProvider<Material> baseStatueMaterial,
             StatueType statueType)
             {
-                this.LogString("Starting InstallSystemOnAvatar for: " + avatarRoot.Name);
+                this.LogInfo("Starting InstallSystemOnAvatar for: " + avatarRoot.Name);
 
                 // Start
                 var avatarRootSlot = avatarRoot;
@@ -250,25 +274,25 @@ namespace Restonite
                 {
                     avatarSpace = avatarRootSlot.AttachComponent<DynamicVariableSpace>();
                     avatarSpace.SpaceName.Value = "Avatar";
-                    this.LogString("Created Avatar DynVarSpace");
+                    this.LogInfo("Created Avatar DynVarSpace");
                 }
                 else
                 {
-                    this.LogString("Avatar DynVarSpace already exists, skipping");
+                    this.LogInfo("Avatar DynVarSpace already exists, skipping");
                 }
 
                 // Add statue system objects
                 var systemSlot = GetStatueSystem(scratchSpace, uriVariable);
 
-                this.LogString("Duplicating slots onto Avatar Root");
+                this.LogInfo("Duplicating slots onto Avatar Root");
 
                 systemSlot.GetChildrenWithTag("CopyToStatue").ForEach((childSlot) =>
                 {
-                    this.LogString($"Adding {childSlot.Name} with tag {childSlot.Tag}");
+                    this.LogInfo($"Adding {childSlot.Name} with tag {childSlot.Tag}");
                     childSlot.Duplicate(avatarRootSlot);
                 });
 
-                this.LogString($"Found {this.foundMeshRenderers} MeshRenderers");
+                this.LogInfo($"Found {this.foundMeshRenderers} MeshRenderers");
 
                 // Find unique slots to duplicate
                 var normalUniqueSlots = new Dictionary<RefID, Slot>();
@@ -280,7 +304,7 @@ namespace Restonite
                     }
                 });
 
-                this.LogString($"Found {normalUniqueSlots.Count} unique Slots to duplicate");
+                this.LogInfo($"Found {normalUniqueSlots.Count} unique Slots to duplicate");
 
                 // Duplicate each statue slot
                 var statueSlots = new List<Slot>();
@@ -290,7 +314,7 @@ namespace Restonite
                     statueSlots.Last().Name = slot.Value.Name + "_Statue";
                 });
 
-                this.LogString($"Created {statueSlots.Count} statue slots");
+                this.LogInfo($"Created {statueSlots.Count} statue slots");
 
                 // Get SMRs for each statue slot
                 var statueSkinnedMeshRenderers = new List<MeshRenderer>();
@@ -300,7 +324,7 @@ namespace Restonite
                     statueSkinnedMeshRenderers.AddRange(smrs);
                 });
 
-                this.LogString($"Creating material drivers");
+                this.LogInfo($"Creating material drivers");
                 var driverSlot = avatarRootSlot.AddSlot(name: "Drivers");
                 // Oh lordy
                 // var materialDriversSlot = driverSlot.AddSlot("Materials");
@@ -350,7 +374,7 @@ namespace Restonite
                 }
 
 
-                this.LogString($"Created blinder material");
+                this.LogInfo($"Created blinder material");
 
                 // Create Material objects for each statue material
                 var oldMaterialToStatueMaterialMap = new Dictionary<RefID, ReferenceMultiDriver<IAssetProvider<Material>>>();
@@ -362,7 +386,7 @@ namespace Restonite
 
                         if (!oldMaterialToStatueMaterialMap.ContainsKey(material.ReferenceID))
                         {
-                            this.LogString($"Creating material {oldMaterialToStatueMaterialMap.Count + 1} as duplicate of {material.ReferenceID}");
+                            this.LogInfo($"Creating material {oldMaterialToStatueMaterialMap.Count + 1} as duplicate of {material.ReferenceID}");
                             // If assigned == null, use default
 
                             // Create a new statue material object (i.e. drives material slot on statue SMR, has default material with normal map)
@@ -405,7 +429,7 @@ namespace Restonite
                         }
                         else
                         {
-                            this.LogString($"Material {i} was already created as {oldMaterialToStatueMaterialMap[material.ReferenceID].ReferenceID}");
+                            this.LogInfo($"Material {i} was already created as {oldMaterialToStatueMaterialMap[material.ReferenceID].ReferenceID}");
                         }
 
                         var drives = oldMaterialToStatueMaterialMap[material.ReferenceID].Drives;
@@ -414,7 +438,7 @@ namespace Restonite
                     }
                 });
 
-                this.LogString($"Converting original materials to transparent versions");
+                this.LogInfo($"Converting original materials to transparent versions");
 
                 var normalMaterialHolder = materialHolder.AddSlot("Normal Materials");
                 var oldMaterialToNewNormalMaterialMap = new Dictionary<RefID, IAssetProvider<Material>>();
@@ -427,14 +451,14 @@ namespace Restonite
 
                         if (!oldMaterialToNewNormalMaterialMap.ContainsKey(oldMaterial.ReferenceID))
                         {
-                            this.LogString($"Creating material for {oldMaterial.ReferenceID}");
+                            this.LogInfo($"Creating material for {oldMaterial.ReferenceID}");
                             var newSlot = normalMaterialHolder.AddSlot($"Normal {oldMaterialToNewNormalMaterialMap.Count}");
                             var newMaterial = MaterialHelpers.CreateAlphaMaterial(oldMaterial, statueType, newSlot);
                             oldMaterialToNewNormalMaterialMap[oldMaterial.ReferenceID] = newMaterial;
                         }
                         else
                         {
-                            this.LogString($"Material {i} was already created as {oldMaterialToNewNormalMaterialMap[oldMaterial.ReferenceID].ReferenceID}");
+                            this.LogInfo($"Material {i} was already created as {oldMaterialToNewNormalMaterialMap[oldMaterial.ReferenceID].ReferenceID}");
                         }
 
                         smr.Materials[i] = oldMaterialToNewNormalMaterialMap[oldMaterial.ReferenceID];
@@ -444,7 +468,7 @@ namespace Restonite
                 // TODO: Hygiene: Create parent slots for avatars
 
                 // Set up enabling drivers
-                this.LogString($"Creating drivers for enabling/disabling normal/statue bodies");
+                this.LogInfo($"Creating drivers for enabling/disabling normal/statue bodies");
 
                 var normalDriverSlot = driverSlot.AddSlot("Avatar/Statue.BodyNormal");
                 var normalVarReader = normalDriverSlot.AttachComponent<DynamicValueVariableDriver<bool>>();
@@ -460,12 +484,12 @@ namespace Restonite
                 //    normalDriver.Drives[normalDriver.Drives.Count - 1].ForceLink(slot.Value.ActiveSelf_Field);
                 //});
 
-                this.LogString($"Linking to BodyNormal");
+                this.LogInfo($"Linking to BodyNormal");
                 foreach (var smr in normalSkinnedMeshRenderers)
                 {
                     normalDriver.Drives.Add().ForceLink(smr.EnabledField);
                 }
-                this.LogString($"Linked {normalSkinnedMeshRenderers.Count} MeshRenderers");
+                this.LogInfo($"Linked {normalSkinnedMeshRenderers.Count} MeshRenderers");
 
                 var statueDriverSlot = driverSlot.AddSlot("Avatar/Statue.BodyStatue");
                 var statueVarReader = statueDriverSlot.AttachComponent<DynamicValueVariableDriver<bool>>();
@@ -481,12 +505,12 @@ namespace Restonite
                 //    statueDriver.Drives[statueDriver.Drives.Count - 1].ForceLink(slot.ActiveSelf_Field);
                 //});
 
-                this.LogString($"Linking to BodyStatue");
+                this.LogInfo($"Linking to BodyStatue");
                 foreach (var smr in statueSkinnedMeshRenderers)
                 {
                     statueDriver.Drives.Add().ForceLink(smr.EnabledField);
                 }
-                this.LogString($"Linked {statueSkinnedMeshRenderers.Count} MeshRenderers");
+                this.LogInfo($"Linked {statueSkinnedMeshRenderers.Count} MeshRenderers");
 
                 var disableOnFreezeDriverSlot = driverSlot.AddSlot("Avatar/Statue.DisableOnFreeze");
                 var dofVarReader = disableOnFreezeDriverSlot.AttachComponent<DynamicValueVariableDriver<bool>>();
@@ -496,11 +520,11 @@ namespace Restonite
                 dofVarReader.DefaultValue.Value = true;
                 dofVarReader.Target.Value = dofDriver.Value.ReferenceID;
 
-                this.LogString($"Driving VRIK");
+                this.LogInfo($"Driving VRIK");
 
                 AddFieldToMultidriver(dofDriver, avatarRootSlot.GetComponent<VRIK>().EnabledField);
 
-                this.LogString($"Searching for bones to drive");
+                this.LogInfo($"Searching for bones to drive");
                 var boneChainSlots = new Dictionary<RefID, Slot>();
 
                 avatarRootSlot.GetComponentsInChildren<DynamicBoneChain>().ForEach((dbc) =>
@@ -513,7 +537,7 @@ namespace Restonite
 
                 boneChainSlots.ToList().ForEach((dbcSlot) => AddFieldToMultidriver(dofDriver, dbcSlot.Value.ActiveSelf_Field));
 
-                this.LogString($"Added {boneChainSlots.Count} bones");
+                this.LogInfo($"Added {boneChainSlots.Count} bones");
 
                 // TODO: copy blendshapes to statue from normal
                 AddFieldToMultidriver(dofDriver, avatarRootSlot.GetComponentInChildren<VisemeAnalyzer>().EnabledField);
@@ -591,17 +615,17 @@ namespace Restonite
                     var newParent = nameBadge.Parent.AddSlot("Name Badge Parent (Statufication)");
                     nameBadge.SetParent(newParent, true);
                     AddFieldToMultidriver(dofDriver, newParent.ActiveSelf_Field);
-                    this.LogString($"Driving namebadge {nameBadge.Name}/{nameBadge.ReferenceID}");
+                    this.LogInfo($"Driving namebadge {nameBadge.Name}/{nameBadge.ReferenceID}");
                 }
 
-                this.LogString($"Driving WhisperVolume");
+                this.LogInfo($"Driving WhisperVolume");
                 var whisperVolSlot = driverSlot.AddSlot("Avatar/Statue.WhisperVolume");
                 var whisperDriver = whisperVolSlot.AttachComponent<DynamicValueVariableDriver<float>>();
                 whisperDriver.DefaultValue.Value = 0.75f;
                 whisperDriver.VariableName.Value = "Avatar/Statue.WhisperVolume";
                 whisperDriver.Target.Value = avatarRootSlot.GetComponentInChildren<AvatarAudioOutputManager>().WhisperConfig.Volume.ReferenceID;
 
-                this.LogString($"Driving Voice and Shout");
+                this.LogInfo($"Driving Voice and Shout");
                 var voiceVolSlot = driverSlot.AddSlot("Avatar/Statue.VoiceVolume");
                 var voiceDriver = voiceVolSlot.AttachComponent<DynamicValueVariableDriver<float>>();
                 var shoutDriver = voiceVolSlot.AttachComponent<DynamicValueVariableDriver<float>>();
@@ -618,7 +642,7 @@ namespace Restonite
 
                 scratchSpace.Destroy();
 
-                this.LogString($"Setup completed successfully!");
+                this.LogSuccess($"Setup completed successfully!");
             }
 
             public Slot SpawnSlot(Slot x, string file, World world, float3 position, float3 scale)
@@ -638,21 +662,21 @@ namespace Restonite
             {
                 if (this.statueSystemFallback.Reference.Value != RefID.Null)
                 {
-                    this.LogString("Using statue system override from RefID " + this.statueSystemFallback.Reference.Value);
+                    this.LogInfo("Using statue system override from RefID " + this.statueSystemFallback.Reference.Value);
 
                     return this.statueSystemFallback.Reference.Target.Duplicate(x);
                 }
                 else
                 {
-                    this.LogString("Getting statue system from cloud");
+                    this.LogInfo("Getting statue system from cloud");
                     // Yoinked from FrooxEngine.FileMetadata.OnImportFile
                     var fileName = uriVariable.Value.Value;
                     var fileUri = new Uri(fileName);
 
                     var record = x.Engine.RecordManager.FetchRecord(fileUri).GetAwaiter().GetResult();
 
-                    this.LogString("Got Record " + record.ToString());
-                    this.LogString("Fetching from " + record.Entity.AssetURI);
+                    this.LogDebug("Got Record " + record.ToString());
+                    this.LogDebug("Fetching from " + record.Entity.AssetURI);
 
                     string fileData = x.Engine.AssetManager.GatherAssetFile(new Uri(record.Entity.AssetURI), 100.0f).GetAwaiter().GetResult();
                     
@@ -663,13 +687,13 @@ namespace Restonite
                     {
                         x.LocalUser.GetPointInFrontOfUser(out var point, out var rotation, float3.Backward);
 
-                        this.LogString("Got file successfully");
+                        this.LogInfo("Got file successfully");
 
                         return SpawnSlot(x, fileData, x.World, point, new float3(1.0f, 1.0f, 1.0f));
                     }
                     else
                     {
-                        this.LogString("ERROR: File was null after RequestGather");
+                        this.LogError("ERROR: File was null after RequestGather");
 
                         return x.AddSlot("File was null after RequestGather");
                     }
