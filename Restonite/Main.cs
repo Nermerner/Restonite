@@ -57,6 +57,7 @@ namespace Restonite
             Slot WizardSlot;
             Text debugText;
             Checkbox skinnedMeshRenderersOnly;
+            Checkbox defaultMaterialAsIs;
 
             readonly ReferenceField<Slot> avatarRoot;
             readonly ReferenceField<Slot> statueSystemFallback;
@@ -197,6 +198,8 @@ namespace Restonite
                 UI.Text("Default statue material:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
                 UI.Next("Base Texture");
                 UI.Current.AttachComponent<RefEditor>().Setup(baseStatueMaterial.Reference);
+
+                defaultMaterialAsIs = UI.HorizontalElementWithLabel("Use default material as-is", 0.925f, () => UI.Checkbox(false));
 
                 UI.Text("Statue transition type:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
                 UI.HorizontalElementWithLabel("Alpha Fade", 0.925f, () => UI.ValueRadio(statueType.Value, (int)StatueType.AlphaFade));
@@ -409,7 +412,9 @@ namespace Restonite
 
                             // Create a new statue material object (i.e. drives material slot on statue SMR, has default material with normal map)
                             var newMaterialHolder = statueMaterialHolder.AddSlot($"Statue {oldMaterialToStatueMaterialMap.Count + 1}");
-                            var newDefaultMaterial = MaterialHelpers.CreateStatueMaterial(material, baseStatueMaterial, newMaterialHolder);
+                            var newDefaultMaterialRefId = defaultMaterialAsIs.State.Value
+                                ? newMaterialHolder.CopyComponent((AssetProvider<Material>)baseStatueMaterial).ReferenceID
+                                : MaterialHelpers.CreateStatueMaterial(material, baseStatueMaterial, newMaterialHolder).ReferenceID;
 
                             // Assigns Statue.Material.Assigned to equality
                             var assignedMaterialDriver = newMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
@@ -423,7 +428,7 @@ namespace Restonite
 
                             // Decides whether we use default or assigned
                             var booleanReferenceDriver = newMaterialHolder.AttachComponent<BooleanReferenceDriver<IAssetProvider<Material>>>();
-                            booleanReferenceDriver.TrueTarget.Value = newDefaultMaterial.ReferenceID;
+                            booleanReferenceDriver.TrueTarget.Value = newDefaultMaterialRefId;
                             bassignedMaterialDriver.Target.ForceLink(booleanReferenceDriver.FalseTarget);
 
                             // Checks if assigned material is null and writes that value to boolean ref driver
