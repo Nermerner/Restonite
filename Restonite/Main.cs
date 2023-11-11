@@ -719,6 +719,18 @@ namespace Restonite
                 broadcastDriver.VariableName.Value = "Avatar/Statue.VoiceVolume";
                 broadcastDriver.Target.Value = avatarRootSlot.GetComponentInChildren<AvatarAudioOutputManager>().BroadcastConfig.Volume.ReferenceID;
 
+                this.LogInfo("Creating defaults configuration");
+
+                var defaultsSlot = statueRootSloot.AddSlot("Defaults");
+
+                var durationDefault = defaultsSlot.AttachComponent<DynamicValueVariable<float>>();
+                durationDefault.VariableName.Value = "Avatar/Statue.Duration.Default";
+                durationDefault.Value.Value = 10;
+
+                var whisperPersist = defaultsSlot.AttachComponent<DynamicValueVariable<bool>>();
+                whisperPersist.VariableName.Value = "Avatar/Statue.Whisper.Persist";
+                whisperPersist.Value.Value = true;
+
                 scratchSpace.Destroy();
 
                 this.LogSuccess($"Setup completed successfully!");
