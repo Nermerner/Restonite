@@ -83,7 +83,7 @@ namespace Restonite
             public void LogInfo(string logMessage)
             {
                 Msg(logMessage);
-                this.debugText.Content.Value = $"<color=black>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{this.debugText?.Content?.Value ?? ""}";
+                this.debugText.Content.Value = $"<color=#e0e0e0>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{this.debugText?.Content?.Value ?? ""}";
             }
 
             public void LogWarn(string logMessage)
@@ -119,12 +119,7 @@ namespace Restonite
                 WizardSlot = x;
                 WizardSlot.Tag = "Developer";
                 WizardSlot.PersistentSelf = false;
-
-                LegacyCanvasPanel canvasPanel = WizardSlot.AttachComponent<LegacyCanvasPanel>();
-                canvasPanel.Panel.AddCloseButton();
-                canvasPanel.Panel.AddParentButton();
-                canvasPanel.Panel.Title = WIZARD_TITLE;
-                canvasPanel.Canvas.Size.Value = new float2(800f, 1000f);
+                WizardSlot.LocalScale *= 0.0008f;
 
                 Slot Data = WizardSlot.AddSlot("Data");
 
@@ -155,15 +150,16 @@ namespace Restonite
                 - Configure material system specifically
                 */
 
-                UIBuilder UI = new UIBuilder(canvasPanel.Canvas);
+                var UI = RadiantUI_Panel.SetupPanel(WizardSlot, WIZARD_TITLE, new float2(800f, 1000f));
+                RadiantUI_Constants.SetupEditorStyle(UI);
 
                 UI.Canvas.MarkDeveloper();
                 UI.Canvas.AcceptPhysicalTouch.Value = false;
 
                 UI.SplitHorizontally(0.5f, out RectTransform left, out RectTransform right);
 
-                left.OffsetMax.Value = new float2(-2f);
-                right.OffsetMin.Value = new float2(2f);
+                left.OffsetMax.Value = new float2(-10f);
+                right.OffsetMin.Value = new float2(10f);
 
                 UI.NestInto(left);
 
@@ -179,7 +175,7 @@ namespace Restonite
                 VerticalLayout verticalLayout = UI.VerticalLayout(4f, childAlignment: Alignment.TopLeft);
                 verticalLayout.ForceExpandHeight.Value = true;
 
-                skinnedMeshRenderersOnly = UI.HorizontalElementWithLabel("Skinned Meshes only", 0.9f, () => UI.Checkbox("Skinned Meshes only", true));
+                skinnedMeshRenderersOnly = UI.HorizontalElementWithLabel("Skinned Meshes only", 0.925f, () => UI.Checkbox(true));
 
                 UI.Text("Avatar Root Slot:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
                 UI.Next("Avatar Root Slot");
@@ -203,10 +199,10 @@ namespace Restonite
                 UI.Current.AttachComponent<RefEditor>().Setup(baseStatueMaterial.Reference);
 
                 UI.Text("Statue transition type:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
-                UI.HorizontalElementWithLabel("Alpha Fade", 0.9f, () => UI.ValueRadio<int>(statueType.Value, (int)StatueType.AlphaFade));
-                UI.HorizontalElementWithLabel("Alpha Cutout", 0.9f, () => UI.ValueRadio<int>(statueType.Value, (int)StatueType.AlphaCutout));
-                UI.HorizontalElementWithLabel("Plane Slicer", 0.9f, () => UI.ValueRadio<int>(statueType.Value, (int)StatueType.PlaneSlicer));
-                UI.HorizontalElementWithLabel("Radial Slicer", 0.9f, () => UI.ValueRadio<int>(statueType.Value, (int)StatueType.RadialSlicer));
+                UI.HorizontalElementWithLabel("Alpha Fade", 0.925f, () => UI.ValueRadio(statueType.Value, (int)StatueType.AlphaFade));
+                UI.HorizontalElementWithLabel("Alpha Cutout", 0.925f, () => UI.ValueRadio(statueType.Value, (int)StatueType.AlphaCutout));
+                UI.HorizontalElementWithLabel("Plane Slicer", 0.925f, () => UI.ValueRadio(statueType.Value, (int)StatueType.PlaneSlicer));
+                UI.HorizontalElementWithLabel("Radial Slicer", 0.925f, () => UI.ValueRadio(statueType.Value, (int)StatueType.RadialSlicer));
 
                 UI.Spacer(24f);
                 confirmButton = UI.Button("Statuefy!");
