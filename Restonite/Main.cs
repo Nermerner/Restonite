@@ -57,6 +57,7 @@ namespace Restonite
             Slot WizardSlot;
             Text debugText;
             Checkbox skinnedMeshRenderersOnly;
+            Checkbox defaultMaterialAsIs;
 
             readonly ReferenceField<Slot> avatarRoot;
             readonly ReferenceField<Slot> statueSystemFallback;
@@ -83,7 +84,7 @@ namespace Restonite
             public void LogInfo(string logMessage)
             {
                 Msg(logMessage);
-                this.debugText.Content.Value = $"<color=black>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{this.debugText?.Content?.Value ?? ""}";
+                this.debugText.Content.Value = $"<color=#e0e0e0>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{this.debugText?.Content?.Value ?? ""}";
             }
 
             public void LogWarn(string logMessage)
@@ -119,12 +120,7 @@ namespace Restonite
                 WizardSlot = x;
                 WizardSlot.Tag = "Developer";
                 WizardSlot.PersistentSelf = false;
-
-                LegacyCanvasPanel canvasPanel = WizardSlot.AttachComponent<LegacyCanvasPanel>();
-                canvasPanel.Panel.AddCloseButton();
-                canvasPanel.Panel.AddParentButton();
-                canvasPanel.Panel.Title = WIZARD_TITLE;
-                canvasPanel.Canvas.Size.Value = new float2(800f, 1000f);
+                WizardSlot.LocalScale *= 0.0008f;
 
                 Slot Data = WizardSlot.AddSlot("Data");
 
@@ -155,15 +151,16 @@ namespace Restonite
                 - Configure material system specifically
                 */
 
-                UIBuilder UI = new UIBuilder(canvasPanel.Canvas);
+                var UI = RadiantUI_Panel.SetupPanel(WizardSlot, WIZARD_TITLE, new float2(800f, 1000f));
+                RadiantUI_Constants.SetupEditorStyle(UI);
 
                 UI.Canvas.MarkDeveloper();
                 UI.Canvas.AcceptPhysicalTouch.Value = false;
 
                 UI.SplitHorizontally(0.5f, out RectTransform left, out RectTransform right);
 
-                left.OffsetMax.Value = new float2(-2f);
-                right.OffsetMin.Value = new float2(2f);
+                left.OffsetMax.Value = new float2(-10f);
+                right.OffsetMin.Value = new float2(10f);
 
                 UI.NestInto(left);
 
@@ -179,7 +176,7 @@ namespace Restonite
                 VerticalLayout verticalLayout = UI.VerticalLayout(4f, childAlignment: Alignment.TopLeft);
                 verticalLayout.ForceExpandHeight.Value = true;
 
-                skinnedMeshRenderersOnly = UI.HorizontalElementWithLabel("Skinned Meshes only", 0.9f, () => UI.Checkbox("Skinned Meshes only", true));
+                skinnedMeshRenderersOnly = UI.HorizontalElementWithLabel("Skinned Meshes only", 0.925f, () => UI.Checkbox(true));
 
                 UI.Text("Avatar Root Slot:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
                 UI.Next("Avatar Root Slot");
@@ -202,11 +199,13 @@ namespace Restonite
                 UI.Next("Base Texture");
                 UI.Current.AttachComponent<RefEditor>().Setup(baseStatueMaterial.Reference);
 
+                defaultMaterialAsIs = UI.HorizontalElementWithLabel("Use default material as-is", 0.925f, () => UI.Checkbox(false));
+
                 UI.Text("Statue transition type:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
-                UI.HorizontalElementWithLabel("Alpha Fade", 0.9f, () => UI.ValueRadio<int>(statueType.Value, (int)StatueType.AlphaFade));
-                UI.HorizontalElementWithLabel("Alpha Cutout", 0.9f, () => UI.ValueRadio<int>(statueType.Value, (int)StatueType.AlphaCutout));
-                UI.HorizontalElementWithLabel("Plane Slicer", 0.9f, () => UI.ValueRadio<int>(statueType.Value, (int)StatueType.PlaneSlicer));
-                UI.HorizontalElementWithLabel("Radial Slicer", 0.9f, () => UI.ValueRadio<int>(statueType.Value, (int)StatueType.RadialSlicer));
+                UI.HorizontalElementWithLabel("Alpha Fade", 0.925f, () => UI.ValueRadio(statueType.Value, (int)StatueType.AlphaFade));
+                UI.HorizontalElementWithLabel("Alpha Cutout", 0.925f, () => UI.ValueRadio(statueType.Value, (int)StatueType.AlphaCutout));
+                UI.HorizontalElementWithLabel("Plane Slicer", 0.925f, () => UI.ValueRadio(statueType.Value, (int)StatueType.PlaneSlicer));
+                UI.HorizontalElementWithLabel("Radial Slicer", 0.925f, () => UI.ValueRadio(statueType.Value, (int)StatueType.RadialSlicer));
 
                 UI.Spacer(24f);
                 confirmButton = UI.Button("Statuefy!");
@@ -413,7 +412,9 @@ namespace Restonite
 
                             // Create a new statue material object (i.e. drives material slot on statue SMR, has default material with normal map)
                             var newMaterialHolder = statueMaterialHolder.AddSlot($"Statue {oldMaterialToStatueMaterialMap.Count + 1}");
-                            var newDefaultMaterial = MaterialHelpers.CreateStatueMaterial(material, baseStatueMaterial, newMaterialHolder);
+                            var newDefaultMaterialRefId = defaultMaterialAsIs.State.Value
+                                ? newMaterialHolder.CopyComponent((AssetProvider<Material>)baseStatueMaterial).ReferenceID
+                                : MaterialHelpers.CreateStatueMaterial(material, baseStatueMaterial, newMaterialHolder).ReferenceID;
 
                             // Assigns Statue.Material.Assigned to equality
                             var assignedMaterialDriver = newMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
@@ -427,7 +428,7 @@ namespace Restonite
 
                             // Decides whether we use default or assigned
                             var booleanReferenceDriver = newMaterialHolder.AttachComponent<BooleanReferenceDriver<IAssetProvider<Material>>>();
-                            booleanReferenceDriver.TrueTarget.Value = newDefaultMaterial.ReferenceID;
+                            booleanReferenceDriver.TrueTarget.Value = newDefaultMaterialRefId;
                             bassignedMaterialDriver.Target.ForceLink(booleanReferenceDriver.FalseTarget);
 
                             // Checks if assigned material is null and writes that value to boolean ref driver
@@ -717,6 +718,18 @@ namespace Restonite
                 broadcastDriver.DefaultValue.Value = 1.0f;
                 broadcastDriver.VariableName.Value = "Avatar/Statue.VoiceVolume";
                 broadcastDriver.Target.Value = avatarRootSlot.GetComponentInChildren<AvatarAudioOutputManager>().BroadcastConfig.Volume.ReferenceID;
+
+                this.LogInfo("Creating defaults configuration");
+
+                var defaultsSlot = statueRootSloot.AddSlot("Defaults");
+
+                var durationDefault = defaultsSlot.AttachComponent<DynamicValueVariable<float>>();
+                durationDefault.VariableName.Value = "Avatar/Statue.Duration.Default";
+                durationDefault.Value.Value = 10;
+
+                var whisperPersist = defaultsSlot.AttachComponent<DynamicValueVariable<bool>>();
+                whisperPersist.VariableName.Value = "Avatar/Statue.Whisper.Persist";
+                whisperPersist.Value.Value = true;
 
                 scratchSpace.Destroy();
 
