@@ -1,0 +1,5 @@
+"MD5:"
+$(CertUtil -hashfile bin\Release\Restonite.dll MD5)[1] -replace " ",""
+""
+"SHA256:"
+$(CertUtil -hashfile bin\Release\Restonite.dll SHA256)[1] -replace " ",""
