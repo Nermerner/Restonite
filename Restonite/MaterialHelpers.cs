@@ -22,7 +22,7 @@ namespace Restonite
 
         #region MaterialSetup
         #region AlphaFadeSetup
-        static void SetupAlphaFadePBSMaterial(IPBS_Material oldMaterial, PBS_Material newMaterial, Slot destination)
+        private static void SetupAlphaFadePBSMaterial(IPBS_Material oldMaterial, PBS_Material newMaterial, Slot destination)
         {
             FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
 
@@ -78,7 +78,7 @@ namespace Restonite
             newMaterial.OffsetFactor.Value = -0.1f;
         }
 
-        static void SetupAlphaFadeDualsidedMaterial(PBS_DualSidedMaterial oldMaterial, PBS_DualSidedMaterial newMaterial, Slot destination)
+        private static void SetupAlphaFadeDualsidedMaterial(PBS_DualSidedMaterial oldMaterial, PBS_DualSidedMaterial newMaterial, Slot destination)
         {
             FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
 
@@ -100,7 +100,7 @@ namespace Restonite
             newMaterial.OffsetFactor.Value = -0.1f;
         }
 
-        static void SetupAlphaFadeXiexeMaterial(XiexeToonMaterial oldMaterial, XiexeToonMaterial newMaterial, Slot destination)
+        private static void SetupAlphaFadeXiexeMaterial(XiexeToonMaterial oldMaterial, XiexeToonMaterial newMaterial, Slot destination)
         {
             FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
 
@@ -157,7 +157,7 @@ namespace Restonite
         }
         #endregion AlphaFadeSetup
         #region AlphaCutoutSetup
-        static void SetupAlphaCutoutPBSMaterial(IPBS_Material oldMaterial, PBS_Material newMaterial, Slot destination)
+        private static void SetupAlphaCutoutPBSMaterial(IPBS_Material oldMaterial, PBS_Material newMaterial, Slot destination)
         {
             FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
 
@@ -205,7 +205,7 @@ namespace Restonite
             newMaterial.OffsetFactor.Value = -0.1f;
         }
 
-        static void SetupAlphaCutoutDualsidedMaterial(PBS_DualSidedMaterial oldMaterial, PBS_DualSidedMaterial newMaterial, Slot destination)
+        private static void SetupAlphaCutoutDualsidedMaterial(PBS_DualSidedMaterial oldMaterial, PBS_DualSidedMaterial newMaterial, Slot destination)
         {
             FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
 
@@ -228,7 +228,7 @@ namespace Restonite
             newMaterial.OffsetFactor.Value = -0.1f;
         }
 
-        static void SetupAlphaCutoutXiexeMaterial(XiexeToonMaterial oldMaterial, XiexeToonMaterial newMaterial, Slot destination)
+        private static void SetupAlphaCutoutXiexeMaterial(XiexeToonMaterial oldMaterial, XiexeToonMaterial newMaterial, Slot destination)
         {
             FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
 
@@ -277,7 +277,7 @@ namespace Restonite
         }
         #endregion AlphaCutoutSetup
         #region SlicerPlaneSetup
-        static void SetupSlicerPlanePBSMaterial(IPBS_Material oldMaterial, PBS_Slice newMaterial, Slot destination)
+        private static void SetupSlicerPlanePBSMaterial(IPBS_Material oldMaterial, PBS_Slice newMaterial, Slot destination)
         {
             FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
             var plane = newMaterial.Slicers.Add();
@@ -305,7 +305,7 @@ namespace Restonite
         }
         #endregion SlicerPlaneSetup
         #region RadialDisplace
-        static void SetupRadialDisplacePBSMaterial(IPBS_Material oldMaterial, PBS_DistanceLerpMaterial newMaterial, Slot destination)
+        private static void SetupRadialDisplacePBSMaterial(IPBS_Material oldMaterial, PBS_DistanceLerpMaterial newMaterial, Slot destination)
         {
             FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
             var sphere = newMaterial.Points.Add();

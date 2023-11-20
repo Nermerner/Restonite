@@ -68,9 +68,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Avatar.cs" />
+    <Compile Include="Log.cs" />
     <Compile Include="Main.cs" />
     <Compile Include="MaterialHelpers.cs" />
+    <Compile Include="MeshRendererMap.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="WizardUi.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
