@@ -1,8 +1,7 @@
-﻿using Elements.Core;
+using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
-using Microsoft.SqlServer.Server;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,13 +15,8 @@ namespace Restonite
         public Slot AvatarRoot { get; private set; }
         public bool HasExistingSystem { get; private set; }
         public bool HasLegacySystem { get; private set; }
-
-        private bool _skinnedMeshRenderersOnly;
-
         public List<MeshRendererMap> MeshRenderers { get; } = new List<MeshRendererMap>();
         public Slot StatueRoot { get; private set; }
-
-        private Slot _generatedMaterials;
 
         #endregion
 
@@ -232,7 +226,7 @@ namespace Restonite
                         ? nameBadge.Parent
                         : nameBadge.Parent.AddSlot("Name Badge Parent (Statufication)");
 
-                    if(newParent != nameBadge.Parent)
+                    if (newParent != nameBadge.Parent)
                         nameBadge.SetParent(newParent, true);
 
                     AddFieldToMultidriver(dofDriver, newParent.ActiveSelf_Field);
@@ -387,7 +381,7 @@ namespace Restonite
             // Move all statue materials to slot temporarily
             foreach (var map in MeshRenderers)
             {
-                for(var i = 0; i < map.NormalMaterials.Count; i++)
+                for (var i = 0; i < map.NormalMaterials.Count; i++)
                 {
                     var material = map.NormalMaterials[i];
 
@@ -611,7 +605,7 @@ namespace Restonite
                 _slotsMap = new Dictionary<Slot, Slot>();
                 foreach (var slot in uniqueSlots)
                 {
-                    if(!slot.Value.Name.Contains("Statue"))
+                    if (!slot.Value.Name.Contains("Statue"))
                     {
                         var existingStatueSlot = uniqueSlots
                             .Where(x => x.Value.Name.Contains(slot.Value.Name) && x.Value.Name.Contains("Statue"))
@@ -626,7 +620,7 @@ namespace Restonite
 
                 Log.Info($"Found {_slotsMap.Count} unique slots");
 
-                foreach(var map in _slotsMap)
+                foreach (var map in _slotsMap)
                 {
                     var normalRenderers = (skinnedMeshRenderersOnly
                         ? map.Key.GetComponentsInChildren<SkinnedMeshRenderer>().Cast<MeshRenderer>()
@@ -637,7 +631,7 @@ namespace Restonite
                         : map.Value?.GetComponentsInChildren<MeshRenderer>() ?? Enumerable.Empty<MeshRenderer>()
                         ).ToList();
 
-                    foreach(var normal in normalRenderers)
+                    foreach (var normal in normalRenderers)
                     {
                         var statue = statueRenderers.Find(x => x.Mesh.Value == normal.Mesh.Value);
 
@@ -650,7 +644,7 @@ namespace Restonite
 
                         Log.Debug($"MeshRenderer {normal.ReferenceID} linked to {statue?.ReferenceID ?? RefID.Null}");
 
-                        foreach(var material in rendererMap.NormalMaterials)
+                        foreach (var material in rendererMap.NormalMaterials)
                         {
                             rendererMap.StatueMaterials.Add(material);
                             Log.Debug($"Material {material.ReferenceID} linked to {defaultMaterial?.ReferenceID ?? RefID.Null}");
@@ -696,9 +690,9 @@ namespace Restonite
                     {
                         Log.Info("Using existing avatar default statue material");
 
-                        foreach(var map in MeshRenderers)
+                        foreach (var map in MeshRenderers)
                         {
-                            for(var i = 0; i < map.StatueMaterials.Count; i++)
+                            for (var i = 0; i < map.StatueMaterials.Count; i++)
                             {
                                 map.StatueMaterials[i] = statue0Material;
                                 Log.Debug($"Material {map.NormalMaterials[i].ReferenceID} linked to {statue0Material.ReferenceID}");
@@ -721,21 +715,10 @@ namespace Restonite
                     Log.Info("Using user supplied default statue material");
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Log.Error(ex.Message.Replace("\r\n", "<br>"));
             }
-        }
-
-        private static Slot FindSlot(List<Slot> slots, Predicate<Slot> predicate, string name = null, string tag = null)
-        {
-            foreach (var slot in slots)
-            {
-                if (((name == null && tag == null) || (tag != null && slot.Tag == tag) || (name != null && slot.Name == name)) && predicate(slot))
-                    return slot;
-            }
-
-            return null;
         }
 
         public void SetupRootDynVar()
@@ -766,9 +749,9 @@ namespace Restonite
                     return false;
                 }
 
-                foreach(var material in map.StatueMaterials)
+                foreach (var material in map.StatueMaterials)
                 {
-                    if(material == null || material.ReferenceID == RefID.Null)
+                    if (material == null || material.ReferenceID == RefID.Null)
                     {
                         Log.Error("Missing default statue material for some material slots, aborting");
                         return false;
@@ -793,10 +776,28 @@ namespace Restonite
         private IAssetProvider<Material> _blinderMaterial;
         private Slot _defaults;
         private Slot _drivers;
+        private Slot _generatedMaterials;
         private Slot _meshes;
         private Slot _normalMaterials;
+        private bool _skinnedMeshRenderersOnly;
         private Dictionary<Slot, Slot> _slotsMap = new Dictionary<Slot, Slot>();
+
         private Slot _statueMaterials;
+
+        #endregion
+
+        #region Private Methods
+
+        private static Slot FindSlot(List<Slot> slots, Predicate<Slot> predicate, string name = null, string tag = null)
+        {
+            foreach (var slot in slots)
+            {
+                if (((name == null && tag == null) || (tag != null && slot.Tag == tag) || (name != null && slot.Name == name)) && predicate(slot))
+                    return slot;
+            }
+
+            return null;
+        }
 
         #endregion
     }
