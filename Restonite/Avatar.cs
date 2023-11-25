@@ -1,4 +1,4 @@
-using Elements.Core;
+﻿using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -646,7 +646,7 @@ namespace Restonite
 
                         foreach (var material in rendererMap.NormalMaterials)
                         {
-                            rendererMap.StatueMaterials.Add(material);
+                            rendererMap.StatueMaterials.Add(defaultMaterial);
                             Log.Debug($"Material {material.ReferenceID} linked to {defaultMaterial?.ReferenceID ?? RefID.Null}");
                         }
 
@@ -694,8 +694,11 @@ namespace Restonite
                         {
                             for (var i = 0; i < map.StatueMaterials.Count; i++)
                             {
-                                map.StatueMaterials[i] = statue0Material;
-                                Log.Debug($"Material {map.NormalMaterials[i].ReferenceID} linked to {statue0Material.ReferenceID}");
+                                if (map.StatueMaterials[i] != statue0Material)
+                                {
+                                    map.StatueMaterials[i] = statue0Material;
+                                    Log.Debug($"Material {map.NormalMaterials[i].ReferenceID} linked to {statue0Material.ReferenceID}");
+                                }
                             }
                         }
 
@@ -704,11 +707,23 @@ namespace Restonite
                     }
                     else
                     {
-                        Log.Debug("Unable to find statue 0 material");
+                        Log.Warn("Couldn't find a material to use for default statue material");
                     }
                 }
                 else
                 {
+                    foreach (var map in MeshRenderers)
+                    {
+                        for (var i = 0; i < map.StatueMaterials.Count; i++)
+                        {
+                            if (map.StatueMaterials[i] != defaultMaterial)
+                            {
+                                map.StatueMaterials[i] = defaultMaterial;
+                                Log.Debug($"Material {map.NormalMaterials[i].ReferenceID} linked to {defaultMaterial.ReferenceID}");
+                            }
+                        }
+                    }
+
                     _blinderMaterial = defaultMaterial;
                     Log.Debug($"Using material {defaultMaterial.ReferenceID} as blinder material");
 
