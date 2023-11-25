@@ -44,6 +44,9 @@
     <Reference Include="FrooxEngine">
       <HintPath>dependencies\FrooxEngine.dll</HintPath>
     </Reference>
+    <Reference Include="FrooxEngine.Store">
+      <HintPath>dependencies\FrooxEngine.Store.dll</HintPath>
+    </Reference>
     <Reference Include="ResoniteModLoader">
       <HintPath>dependencies\ResoniteModLoader.dll</HintPath>
     </Reference>
