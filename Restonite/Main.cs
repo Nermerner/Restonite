@@ -261,7 +261,7 @@ namespace Restonite
                 {
                     var errorString = $"ERROR: Encountered exception during install: {ex.Message} / {ex}";
                     this.LogError(errorString);
-                    this.LogError("ERROR: Sorry! We ran into an error installing the statue system.<br>Debugging information has been copied to your clipboard; please send it to the Statue devs!<br>(Arion, Azavit, Nermerner)");
+                    this.LogError("ERROR: Sorry! We ran into an error installing the statue system.<br>Debugging information has been copied to your clipboard; please send it to the Statue devs!<br>(Arion, Azavit, Nermerner, Uruloke)");
                     Engine.Current.InputInterface.Clipboard.SetText(this.debugText.Content.Value);
                 }
             }
