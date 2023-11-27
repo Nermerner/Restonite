@@ -28,8 +28,9 @@ namespace Restonite
         private const string WIZARD_TITLE = "Statue System Wizard (Mod)";
 
         public override string Name => "Restonite";
-        public override string Author => "Nermerner";
-        public override string Version => "1.1.1";
+        public override string Author => "Nermerner, Uruloke";
+        public override string Version => "1.2.0";
+        public override string Link => "https://github.com/Nermerner/Restonite";
 
         public override void OnEngineInit()
         {
