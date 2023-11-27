@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -350,37 +351,42 @@ namespace Restonite
 
         static public IAssetProvider<Material> CreateAlphaMaterial(IAssetProvider<Material> originalMaterial, StatueType statueType, Slot destination)
         {
-            switch(statueType)
+            switch (statueType)
             {
                 case StatueType.AlphaFade:
                     switch(originalMaterial)
                     {
                         case PBS_DualSidedMetallic dsm:
                             {
+                                Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                 var newMaterial = destination.AttachComponent<PBS_DualSidedMetallic>();
                                 SetupAlphaFadeDualsidedMaterial(dsm, newMaterial, destination);
                                 return newMaterial;
                             }
                         case PBS_DualSidedSpecular dss:
                             {
+                                Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                 var newMaterial = destination.AttachComponent<PBS_DualSidedSpecular>();
                                 SetupAlphaFadeDualsidedMaterial(dss, newMaterial, destination);
                                 return newMaterial;
                             }
                         case IPBS_Metallic m:
                             {
+                                Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                 var newMaterial = destination.AttachComponent<PBS_Metallic>();
                                 SetupAlphaFadePBSMaterial(m, newMaterial, destination);
                                 return newMaterial;
                             }
                         case IPBS_Specular s:
                             {
+                                Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                 var newMaterial = destination.AttachComponent<PBS_Specular>();
                                 SetupAlphaFadePBSMaterial(s, newMaterial, destination);
                                 return newMaterial;
                             }
                         case XiexeToonMaterial x:
                             {
+                                Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                 var newMaterial = destination.AttachComponent<XiexeToonMaterial>();
                                 SetupAlphaFadeXiexeMaterial(x, newMaterial, destination);
                                 return newMaterial;
@@ -395,30 +401,35 @@ namespace Restonite
                         {
                             case PBS_DualSidedMetallic dsm:
                                 {
+                                    Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_DualSidedMetallic>();
                                     SetupAlphaCutoutDualsidedMaterial(dsm, newMaterial, destination);
                                     return newMaterial;
                                 }
                             case PBS_DualSidedSpecular dss:
                                 {
+                                    Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_DualSidedSpecular>();
                                     SetupAlphaCutoutDualsidedMaterial(dss, newMaterial, destination);
                                     return newMaterial;
                                 }
                             case IPBS_Metallic m:
                                 {
+                                    Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_Metallic>();
                                     SetupAlphaCutoutPBSMaterial(m, newMaterial, destination);
                                     return newMaterial;
                                 }
                             case IPBS_Specular s:
                                 {
+                                    Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_Specular>();
                                     SetupAlphaCutoutPBSMaterial(s, newMaterial, destination);
                                     return newMaterial;
                                 }
                             case XiexeToonMaterial x:
                                 {
+                                    Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<XiexeToonMaterial>();
                                     SetupAlphaCutoutXiexeMaterial(x, newMaterial, destination);
                                     return newMaterial;
@@ -433,17 +444,20 @@ namespace Restonite
                         {
                             case IPBS_Metallic m:
                                 {
+                                    Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_SliceMetallic>();
                                     SetupSlicerPlanePBSMaterial(m, newMaterial, destination);
                                     return newMaterial;
                                 }
                             case IPBS_Specular s:
                                 {
+                                    Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_SliceSpecular>();
                                     SetupSlicerPlanePBSMaterial(s, newMaterial, destination);
                                     return newMaterial;
                                 }
                             default:
+                                Log.Error($"Material type {originalMaterial.GetType().Name} not supported as {statueType}");
                                 destination.Name = "Material type was not supported for PlaneSlicer";
                                 break;
                         }
@@ -455,17 +469,20 @@ namespace Restonite
                         {
                             case IPBS_Metallic m:
                                 {
+                                    Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_DistanceLerpMetallic>();
                                     SetupRadialDisplacePBSMaterial(m, newMaterial, destination);
                                     return newMaterial;
                                 }
                             case IPBS_Specular s:
                                 {
+                                    Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_DistanceLerpSpecular>();
                                     SetupRadialDisplacePBSMaterial(s, newMaterial, destination);
                                     return newMaterial;
                                 }
                             default:
+                                Log.Error($"Material type {originalMaterial.GetType().Name} not supported as {statueType}");
                                 destination.Name = "Material type was not supported for RadialSlicer";
                                 break;
                         }

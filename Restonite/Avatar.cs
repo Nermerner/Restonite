@@ -1,4 +1,4 @@
-using Elements.Core;
+﻿using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -374,7 +374,7 @@ namespace Restonite
             Log.Info($"Duplicated {count} statue slots");
         }
 
-        public void GenerateNormalMaterials(StatueType statueType)
+        public void GenerateNormalMaterials()
         {
             Log.Info("Converting original materials to transparent versions");
 
@@ -396,34 +396,35 @@ namespace Restonite
             // Destroy all existing children
             _normalMaterials.DestroyChildren();
 
-            var oldMaterialToNewNormalMaterialMap = new Dictionary<RefID, IAssetProvider<Material>>();
+            var oldMaterialToNewNormalMaterialMap = new Dictionary<string, IAssetProvider<Material>>();
             // Create alpha material and swap normal material for it
             MeshRenderers.ForEach((map) =>
             {
                 for (int i = 0; i < map.Materials.Count; ++i)
                 {
                     var oldMaterial = map.Materials[i].Normal;
+                    var statueType = map.Materials[i].TransitionType;
+                    var key = $"{oldMaterial.ReferenceID}_{statueType}";
 
-                    if (!oldMaterialToNewNormalMaterialMap.ContainsKey(oldMaterial.ReferenceID))
+                    if (!oldMaterialToNewNormalMaterialMap.ContainsKey(key))
                     {
                         Log.Info($"Creating material for {oldMaterial.ReferenceID}");
                         var newSlot = _normalMaterials.AddSlot($"Normal {oldMaterialToNewNormalMaterialMap.Count}");
-                        var newMaterial = MaterialHelpers.CreateAlphaMaterial(oldMaterial, statueType, newSlot);
-                        oldMaterialToNewNormalMaterialMap[oldMaterial.ReferenceID] = newMaterial;
+                        oldMaterialToNewNormalMaterialMap[key] = MaterialHelpers.CreateAlphaMaterial(oldMaterial, statueType, newSlot);
                     }
                     else
                     {
-                        Log.Info($"Material {i} was already created as {oldMaterialToNewNormalMaterialMap[oldMaterial.ReferenceID].ReferenceID}");
+                        Log.Info($"Material {i} was already created as {oldMaterialToNewNormalMaterialMap[key].ReferenceID}");
                     }
 
-                    map.NormalMeshRenderer.Materials[i] = oldMaterialToNewNormalMaterialMap[oldMaterial.ReferenceID];
+                    map.NormalMeshRenderer.Materials[i] = oldMaterialToNewNormalMaterialMap[key];
                 }
             });
 
             _normalMaterials.RemoveAllComponents(_ => true);
         }
 
-        public void GenerateStatueMaterials(bool defaultMaterialAsIs)
+        public void GenerateStatueMaterials()
         {
             // Move all statue materials to slot temporarily
             foreach (var map in MeshRenderers)
@@ -432,10 +433,10 @@ namespace Restonite
                 {
                     var material = map.Materials[i].Statue;
 
-                    if (material.Slot.Parent == _normalMaterials)
+                    if (material.Slot.Parent == _statueMaterials)
                     {
-                        Log.Debug($"Moving material {material.ReferenceID} from {material.Slot.Name} to {_normalMaterials.Name}");
-                        map.StatueMaterials[i] = (AssetProvider<Material>)_normalMaterials.MoveComponent((AssetProvider<Material>)material);
+                        Log.Debug($"Moving material {material.ReferenceID} from {material.Slot.Name} to {_statueMaterials.Name}");
+                        map.Materials[i].Statue = (AssetProvider<Material>)_statueMaterials.MoveComponent((AssetProvider<Material>)material);
                     }
                 }
             }
@@ -485,17 +486,20 @@ namespace Restonite
             Log.Info("Created blinder material");
 
             // Create Material objects for each statue material
-            var oldMaterialToStatueMaterialMap = new Dictionary<RefID, ReferenceMultiDriver<IAssetProvider<Material>>>();
+            var oldMaterialToStatueMaterialMap = new Dictionary<string, ReferenceMultiDriver<IAssetProvider<Material>>>();
             MeshRenderers.ForEach((map) =>
             {
                 for (int i = 0; i < map.Materials.Count; ++i)
                 {
                     var normalMaterial = map.Materials[i].Normal;
                     var statueMaterial = map.Materials[i].Statue;
+                    var defaultMaterialAsIs = map.Materials[i].UseAsIs;
+                    var key = $"{normalMaterial.ReferenceID}_{defaultMaterialAsIs}";
 
-                    if (!oldMaterialToStatueMaterialMap.ContainsKey(normalMaterial.ReferenceID))
+                    if (!oldMaterialToStatueMaterialMap.ContainsKey(key))
                     {
                         Log.Info($"Creating material {oldMaterialToStatueMaterialMap.Count + 1} as duplicate of {normalMaterial.ReferenceID}");
+                        Log.Debug(defaultMaterialAsIs ? "Using material as-is" : "Merging with normal material maps");
                         // If assigned == null, use default
 
                         // Create a new statue material object (i.e. drives material slot on statue
@@ -537,14 +541,14 @@ namespace Restonite
                         multiDriver.Drives.Add();
                         multiDriver.Drives[0].ForceLink(dynMaterialVariable.Reference);
 
-                        oldMaterialToStatueMaterialMap.Add(normalMaterial.ReferenceID, multiDriver);
+                        oldMaterialToStatueMaterialMap.Add(key, multiDriver);
                     }
                     else
                     {
-                        Log.Info($"Material {i} was already created as {oldMaterialToStatueMaterialMap[normalMaterial.ReferenceID].ReferenceID}");
+                        Log.Info($"Material {i} was already created as {oldMaterialToStatueMaterialMap[key].ReferenceID}");
                     }
 
-                    var drives = oldMaterialToStatueMaterialMap[normalMaterial.ReferenceID].Drives;
+                    var drives = oldMaterialToStatueMaterialMap[key].Drives;
                     drives.Add().ForceLink(map.StatueMeshRenderer.Materials.GetElement(i));
                     // Thanks Dann :)
                 }

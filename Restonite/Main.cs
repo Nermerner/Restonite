@@ -87,11 +87,7 @@ namespace Restonite
                 Log.Setup(_ui, Debug, Msg, Warn, Error);
             }
 
-            public void InstallSystemOnAvatar(
-                Slot scratchSpace,
-                StatueType statueType,
-                SyncRef<Slot> statueSystemFallback,
-                bool defaultMaterialAsIs)
+            public void InstallSystemOnAvatar(Slot scratchSpace, SyncRef<Slot> statueSystemFallback)
             {
                 Log.Info("Starting install for avatar " + _avatar.AvatarRoot.Name);
 
@@ -117,8 +113,8 @@ namespace Restonite
 
                 // Create a map of normal materials -> statue materials
                 Log.Info("Creating material drivers");
-                _avatar.GenerateStatueMaterials(defaultMaterialAsIs);
-                _avatar.GenerateNormalMaterials(statueType);
+                _avatar.GenerateStatueMaterials();
+                _avatar.GenerateNormalMaterials();
 
                 // Set up drivers
                 _avatar.CopyBlendshapes();
