@@ -1,4 +1,4 @@
-﻿using Elements.Core;
+using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -381,14 +381,14 @@ namespace Restonite
             // Move all statue materials to slot temporarily
             foreach (var map in MeshRenderers)
             {
-                for (var i = 0; i < map.NormalMaterials.Count; i++)
+                for (var i = 0; i < map.Materials.Count; i++)
                 {
-                    var material = map.NormalMaterials[i];
+                    var material = map.Materials[i].Normal;
 
                     if (material.Slot.Parent == _normalMaterials)
                     {
                         Log.Debug($"Moving material {material.ReferenceID} from {material.Slot.Name} to {_normalMaterials.Name}");
-                        map.NormalMaterials[i] = (AssetProvider<Material>)_normalMaterials.MoveComponent((AssetProvider<Material>)material);
+                        map.Materials[i].Normal = (AssetProvider<Material>)_normalMaterials.MoveComponent((AssetProvider<Material>)material);
                     }
                 }
             }
@@ -400,9 +400,9 @@ namespace Restonite
             // Create alpha material and swap normal material for it
             MeshRenderers.ForEach((map) =>
             {
-                for (int i = 0; i < map.NormalMaterials.Count; ++i)
+                for (int i = 0; i < map.Materials.Count; ++i)
                 {
-                    var oldMaterial = map.NormalMaterials[i];
+                    var oldMaterial = map.Materials[i].Normal;
 
                     if (!oldMaterialToNewNormalMaterialMap.ContainsKey(oldMaterial.ReferenceID))
                     {
@@ -428,9 +428,9 @@ namespace Restonite
             // Move all statue materials to slot temporarily
             foreach (var map in MeshRenderers)
             {
-                for (var i = 0; i < map.StatueMaterials.Count; i++)
+                for (var i = 0; i < map.Materials.Count; i++)
                 {
-                    var material = map.StatueMaterials[i];
+                    var material = map.Materials[i].Statue;
 
                     if (material.Slot.Parent == _normalMaterials)
                     {
@@ -488,10 +488,10 @@ namespace Restonite
             var oldMaterialToStatueMaterialMap = new Dictionary<RefID, ReferenceMultiDriver<IAssetProvider<Material>>>();
             MeshRenderers.ForEach((map) =>
             {
-                for (int i = 0; i < map.NormalMaterials.Count; ++i)
+                for (int i = 0; i < map.Materials.Count; ++i)
                 {
-                    var normalMaterial = map.NormalMaterials[i];
-                    var statueMaterial = map.StatueMaterials[i];
+                    var normalMaterial = map.Materials[i].Normal;
+                    var statueMaterial = map.Materials[i].Statue;
 
                     if (!oldMaterialToStatueMaterialMap.ContainsKey(normalMaterial.ReferenceID))
                     {
@@ -568,7 +568,7 @@ namespace Restonite
             });
         }
 
-        public void ReadAvatarRoot(Slot newAvatarRoot, IAssetProvider<Material> defaultMaterial, bool skinnedMeshRenderersOnly)
+        public void ReadAvatarRoot(Slot newAvatarRoot, IAssetProvider<Material> defaultMaterial, bool skinnedMeshRenderersOnly, bool useDefaultAsIs, StatueType transitionType)
         {
             MeshRenderers.Clear();
             AvatarRoot = newAvatarRoot;
@@ -639,16 +639,19 @@ namespace Restonite
                         {
                             NormalMeshRenderer = normal,
                             StatueMeshRenderer = statue,
-                            NormalMaterials = normal.Materials.ToList()
+                            Materials = normal.Materials.Select(x => new MaterialMap
+                            {
+                                Normal = x,
+                                Statue = defaultMaterial,
+                                TransitionType = transitionType,
+                                UseAsIs = useDefaultAsIs,
+                            }).ToList()
                         };
 
                         Log.Debug($"MeshRenderer {normal.ReferenceID} linked to {statue?.ReferenceID ?? RefID.Null}");
 
-                        foreach (var material in rendererMap.NormalMaterials)
-                        {
-                            rendererMap.StatueMaterials.Add(defaultMaterial);
-                            Log.Debug($"Material {material.ReferenceID} linked to {defaultMaterial?.ReferenceID ?? RefID.Null}");
-                        }
+                        foreach (var material in rendererMap.Materials)
+                            Log.Debug($"Material {material.Normal.ReferenceID} linked to {material.Statue?.ReferenceID ?? RefID.Null}");
 
                         MeshRenderers.Add(rendererMap);
                     }
@@ -692,12 +695,12 @@ namespace Restonite
 
                         foreach (var map in MeshRenderers)
                         {
-                            for (var i = 0; i < map.StatueMaterials.Count; i++)
+                            for (var i = 0; i < map.Materials.Count; i++)
                             {
-                                if (map.StatueMaterials[i] != statue0Material)
+                                if (map.Materials[i].Statue != statue0Material)
                                 {
-                                    map.StatueMaterials[i] = statue0Material;
-                                    Log.Debug($"Material {map.NormalMaterials[i].ReferenceID} linked to {statue0Material.ReferenceID}");
+                                    map.Materials[i].Statue = statue0Material;
+                                    Log.Debug($"Material {map.Materials[i].Normal.ReferenceID} linked to {statue0Material.ReferenceID}");
                                 }
                             }
                         }
@@ -714,12 +717,12 @@ namespace Restonite
                 {
                     foreach (var map in MeshRenderers)
                     {
-                        for (var i = 0; i < map.StatueMaterials.Count; i++)
+                        for (var i = 0; i < map.Materials.Count; i++)
                         {
-                            if (map.StatueMaterials[i] != defaultMaterial)
+                            if (map.Materials[i].Statue != defaultMaterial)
                             {
-                                map.StatueMaterials[i] = defaultMaterial;
-                                Log.Debug($"Material {map.NormalMaterials[i].ReferenceID} linked to {defaultMaterial.ReferenceID}");
+                                map.Materials[i].Statue = defaultMaterial;
+                                Log.Debug($"Material {map.Materials[i].Normal.ReferenceID} linked to {defaultMaterial.ReferenceID}");
                             }
                         }
                     }
@@ -764,9 +767,9 @@ namespace Restonite
                     return false;
                 }
 
-                foreach (var material in map.StatueMaterials)
+                foreach (var material in map.Materials)
                 {
-                    if (material == null || material.ReferenceID == RefID.Null)
+                    if (material.Statue == null || material.Statue.ReferenceID == RefID.Null)
                     {
                         Log.Error("Missing default statue material for some material slots, aborting");
                         return false;

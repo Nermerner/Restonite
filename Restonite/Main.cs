@@ -17,12 +17,10 @@ namespace Restonite
 {
     public enum StatueType : int
     {
-        None = 0,
         AlphaFade,
         AlphaCutout,
         PlaneSlicer,
         RadialSlicer,
-        Count,
     }
 
     public class StoneMod : ResoniteMod

@@ -18,7 +18,7 @@ namespace Restonite
         private readonly Checkbox _defaultMaterialAsIs;
         private readonly ReferenceField<Slot> _avatarRoot;
         private readonly ReferenceField<Slot> _statueSystemFallback;
-        private readonly ValueField<int> _statueType;
+        private readonly ValueField<StatueType> _statueType;
         private readonly Button _confirmButton;
         private readonly ReferenceField<IAssetProvider<Material>> _baseStatueMaterial;
         private readonly ReferenceMultiplexer<MeshRenderer> _foundMeshRenderers;
@@ -62,7 +62,7 @@ namespace Restonite
             _avatarRoot = Data.AddSlot("avatarRoot").AttachComponent<ReferenceField<Slot>>();
             _statueSystemFallback = Data.AddSlot("statueSystemFallback").AttachComponent<ReferenceField<Slot>>();
             _baseStatueMaterial = Data.AddSlot("baseMaterial").AttachComponent<ReferenceField<IAssetProvider<Material>>>();
-            _statueType = Data.AddSlot("statueType").AttachComponent<ValueField<int>>();
+            _statueType = Data.AddSlot("statueType").AttachComponent<ValueField<StatueType>>();
             _foundMeshRenderers = Data.AddSlot("foundMRs").AttachComponent<ReferenceMultiplexer<MeshRenderer>>();
 
             /*
@@ -126,11 +126,9 @@ namespace Restonite
 
             _defaultMaterialAsIs = UI.HorizontalElementWithLabel("Use default material as-is", 0.925f, () => UI.Checkbox(false));
 
-            UI.Text("Statue transition type:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
-            UI.HorizontalElementWithLabel("Alpha Fade", 0.925f, () => UI.ValueRadio(_statueType.Value, (int)StatueType.AlphaFade));
-            UI.HorizontalElementWithLabel("Alpha Cutout", 0.925f, () => UI.ValueRadio(_statueType.Value, (int)StatueType.AlphaCutout));
-            UI.HorizontalElementWithLabel("Plane Slicer", 0.925f, () => UI.ValueRadio(_statueType.Value, (int)StatueType.PlaneSlicer));
-            UI.HorizontalElementWithLabel("Radial Slicer", 0.925f, () => UI.ValueRadio(_statueType.Value, (int)StatueType.RadialSlicer));
+            UI.Text("Default transition type:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
+            UI.Next("Default transition type");
+            UI.Current.AttachComponent<EnumMemberEditor>().Setup(_statueType.Value);
 
             UI.Spacer(24f);
             _confirmButton = UI.Button("Install");
@@ -176,7 +174,7 @@ namespace Restonite
 
         private void OnReferencesChanged(SyncField<RefID> syncField)
         {
-            _avatar.ReadAvatarRoot(_avatarRoot.Reference.Target, _baseStatueMaterial.Reference.Target, _skinnedMeshRenderersOnly.State.Value);
+            _avatar.ReadAvatarRoot(_avatarRoot.Reference.Target, _baseStatueMaterial.Reference.Target, _skinnedMeshRenderersOnly.State.Value, _defaultMaterialAsIs.State.Value, _statueType.Value.Value);
 
             _foundMeshRenderers.References.Clear();
             _foundMeshRenderers.References.AddRange(_avatar.MeshRenderers.Select(x => x.NormalMeshRenderer));
@@ -194,7 +192,7 @@ namespace Restonite
             var scratchSpace = _wizardSlot.AddSlot("Scratch space");
             try
             {
-                _installSystemOnAvatar(scratchSpace, (StatueType)_statueType.Value.Value, _statueSystemFallback.Reference, _defaultMaterialAsIs.State.Value);
+                _installSystemOnAvatar(scratchSpace, _statueType.Value.Value, _statueSystemFallback.Reference, _defaultMaterialAsIs.State.Value);
                 HighlightHelper.FlashHighlight(_avatarRoot.Reference.Target, (_a) => true, new colorX(0.5f, 0.5f, 0.5f, 1.0f));
             }
             catch (Exception ex)
