@@ -1,4 +1,4 @@
-using Elements.Core;
+﻿using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -24,7 +24,7 @@ namespace Restonite
 
         public void CopyBlendshapes()
         {
-            Log.Info("Creating drivers between normal/statue meshes and blend shapes");
+            Log.Info("=== Creating drivers between normal/statue slots and blend shapes");
 
             // Remove existing drivers
             _meshes.RemoveAllComponents(_ => true);
@@ -84,7 +84,7 @@ namespace Restonite
 
         public void CreateOrUpdateDefaults()
         {
-            Log.Info("Creating defaults configuration");
+            Log.Info("=== Creating defaults configuration");
 
             var durationDefault = _defaults.GetComponent<DynamicValueVariable<float>>(x => x.VariableName.Value == "Avatar/Statue.Duration.Default");
             if (durationDefault == null)
@@ -105,6 +105,8 @@ namespace Restonite
 
         public void CreateOrUpdateDisableOnFreeze()
         {
+            Log.Info("=== Creating drivers for disable on freeze");
+
             void AddFieldToMultidriver<T>(ValueMultiDriver<T> driver, IField<T> field) => driver.Drives.Add().ForceLink(field);
 
             var disableOnFreezeDriverSlot = _drivers.FindChildOrAdd("Avatar/Statue.DisableOnFreeze");
@@ -248,7 +250,7 @@ namespace Restonite
 
         public void CreateOrUpdateEnableDrivers()
         {
-            Log.Info($"Creating drivers for enabling/disabling normal/statue bodies");
+            Log.Info("=== Creating drivers for enabling/disabling normal/statue bodies");
 
             var normalDriverSlot = _drivers.FindChildOrAdd("Avatar/Statue.BodyNormal");
             normalDriverSlot.RemoveAllComponents(_ => true);
@@ -260,7 +262,7 @@ namespace Restonite
             normalVarReader.DefaultValue.Value = true;
             normalVarReader.Target.Value = normalDriver.Value.ReferenceID;
 
-            Log.Info($"Linking to BodyNormal");
+            Log.Info($"=== Linking normal slots to BodyNormal");
             foreach (var smr in MeshRenderers.Where(x => x.NormalMeshRenderer != null))
             {
                 normalDriver.Drives.Add().ForceLink(smr.NormalMeshRenderer.EnabledField);
@@ -276,7 +278,7 @@ namespace Restonite
             statueVarReader.DefaultValue.Value = false;
             statueVarReader.Target.Value = statueDriver.Value.ReferenceID;
 
-            Log.Info($"Linking to BodyStatue");
+            Log.Info($"=== Linking statue slots to BodyStatue");
             foreach (var smr in MeshRenderers.Where(x => x.StatueMeshRenderer != null))
             {
                 statueDriver.Drives.Add().ForceLink(smr.StatueMeshRenderer.EnabledField);
@@ -287,6 +289,8 @@ namespace Restonite
 
         public void CreateOrUpdateSlots()
         {
+            Log.Info("=== Setting up statue root slot on avatar");
+
             if (StatueRoot == null)
                 StatueRoot = AvatarRoot.AddSlot("Statue");
             StatueRoot.Tag = "StatueSystemSetupSlot";
@@ -312,7 +316,7 @@ namespace Restonite
 
         public void CreateOrUpdateVoiceDrivers()
         {
-            Log.Info("Driving WhisperVolume");
+            Log.Info("=== Driving WhisperVolume");
 
             var whisperVolSlot = _drivers.FindChildOrAdd("Avatar/Statue.WhisperVolume");
             whisperVolSlot.RemoveAllComponents(_ => true);
@@ -322,7 +326,7 @@ namespace Restonite
             whisperDriver.VariableName.Value = "Avatar/Statue.WhisperVolume";
             whisperDriver.Target.Value = AvatarRoot.GetComponentInChildren<AvatarAudioOutputManager>().WhisperConfig.Volume.ReferenceID;
 
-            Log.Info("Driving Voice and Shout");
+            Log.Info("=== Driving Voice and Shout");
 
             var voiceVolSlot = _drivers.FindChildOrAdd("Avatar/Statue.VoiceVolume");
             voiceVolSlot.RemoveAllComponents(_ => true);
@@ -345,6 +349,8 @@ namespace Restonite
         {
             var count = 0;
             var error = false;
+
+            Log.Info("=== Duplicating normal meshes to statue meshes");
 
             _slotsMap.ToList().ForEach(x =>
             {
@@ -569,7 +575,7 @@ namespace Restonite
 
         public void InstallRemasterSystem(Slot systemSlot)
         {
-            Log.Info("Duplicating slots onto avatar");
+            Log.Info("=== Installing Remaster system on avatar");
 
             // Remove the old system
             StatueRoot.DestroyChildren(filter: x => x.Tag == "CopyToStatue");
