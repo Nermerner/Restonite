@@ -790,30 +790,47 @@ namespace Restonite
 
         public bool VerifyInstallRequirements()
         {
-            // Find unique slots to duplicate
             foreach (var map in MeshRenderers)
             {
-                var smrsInChildren = map.NormalMeshRenderer.Slot.GetComponentsInChildren<MeshRenderer>();
-                if (smrsInChildren.Exists(x => x != map.NormalMeshRenderer))
+                if (map.NormalMeshRenderer != null)
                 {
-                    Log.Error($"Slot {map.NormalMeshRenderer.Slot.Name} has nested MeshRenderers, aborting");
-                    return false;
+                    // Check for any nested MeshRenderers
+                    var smrsInChildren = map.NormalMeshRenderer.Slot.GetComponentsInChildren<MeshRenderer>();
+                    if (smrsInChildren.Exists(x => x != map.NormalMeshRenderer))
+                    {
+                        Log.Error($"Slot {map.NormalMeshRenderer.Slot.Name} has nested MeshRenderers, aborting");
+                        return false;
+                    }
                 }
 
                 foreach (var material in map.Materials)
                 {
+                    if (material.Normal != null)
+                    {
+                        // Check for incompatible transition types for materials
+                        if ((material.TransitionType == StatueType.PlaneSlicer || material.TransitionType == StatueType.RadialSlicer)
+                            && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular))
+                        {
+                            Log.Error($"{material.GetType().Name} does not support {material.TransitionType}, aborting");
+                            return false;
+                        }
+                        else if ((material.TransitionType == StatueType.AlphaFade || material.TransitionType == StatueType.AlphaCutout)
+                            && !(material.Normal is PBS_DualSidedMetallic) && !(material.Normal is PBS_DualSidedSpecular)
+                            && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular)
+                            && !(material.Normal is XiexeToonMaterial))
+                        {
+                            Log.Error($"{material.GetType().Name} does not support {material.TransitionType}, aborting");
+                            return false;
+                        }
+                    }
+
+                    // Check for missing statue materials
                     if (material.Statue == null || material.Statue.ReferenceID == RefID.Null)
                     {
                         Log.Error("Missing default statue material for some material slots, aborting");
                         return false;
                     }
                 }
-            }
-
-            if (_blinderMaterial == null || _blinderMaterial.ReferenceID == RefID.Null)
-            {
-                Log.Error("No default statue material found for the install, aborting");
-                return false;
             }
 
             return true;
