@@ -88,25 +88,26 @@ namespace Restonite
                 Log.Setup(_ui, Debug, Msg, Warn, Error);
             }
 
-            public void InstallSystemOnAvatar(Slot scratchSpace, SyncRef<Slot> statueSystemFallback)
+            public bool InstallSystemOnAvatar(Slot scratchSpace, SyncRef<Slot> statueSystemFallback)
             {
                 Log.Info("Starting install for avatar " + _avatar.AvatarRoot.Name);
 
                 // Start
                 if(!_avatar.VerifyInstallRequirements())
-                {
-                    scratchSpace.Destroy();
-                    return;
-                }
+                    return false;
 
                 _avatar.CreateOrUpdateSlots();
                 _avatar.SetupRootDynVar();
 
                 // Add statue system objects
                 var systemSlot = GetStatueSystem(scratchSpace, _uriVariable, statueSystemFallback);
+                if(systemSlot == null)
+                    return false;
+
                 _avatar.InstallRemasterSystem(systemSlot);
 
-                _avatar.DuplicateMeshes();
+                if (!_avatar.DuplicateMeshes())
+                    return false;
 
                 // Materials:
                 // 1. For each material that needs to be created, create a driver and default material
@@ -125,9 +126,9 @@ namespace Restonite
 
                 _avatar.CreateOrUpdateDefaults();
 
-                scratchSpace.Destroy();
+                Log.Success("Setup completed successfully!");
 
-                Log.Success($"Setup completed successfully!");
+                return true;
             }
 
             public Slot SpawnSlot(Slot x, string file, World world, float3 position, float3 scale)

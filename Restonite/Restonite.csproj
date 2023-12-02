@@ -69,6 +69,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Avatar.cs" />
+    <Compile Include="EnumEditor.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="Log.cs" />
     <Compile Include="Main.cs" />
