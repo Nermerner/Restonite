@@ -1,4 +1,4 @@
-﻿using Elements.Core;
+using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -40,7 +40,7 @@ namespace Restonite
                 if (visemeDriver != null)
                 {
                     statue.RemoveComponent(visemeDriver);
-                    Log.Info(string.Format("Removed DirectVisemeDriver on {0}", statue.Name));
+                    Log.Info($"Removed DirectVisemeDriver on {statue.ToShortString()}");
                 }
 
                 var blendshapeDrivers = _blendshapes.AddSlot(normal.Name);
@@ -77,7 +77,7 @@ namespace Restonite
                         }
                     }
 
-                    Log.Info(string.Format("Linked {0} blend shapes for {1}", count, normal.Name));
+                    Log.Info($"Linked {count} blend shapes for {normal.ToShortString()}");
                 }
             }
         }
@@ -232,7 +232,7 @@ namespace Restonite
                         nameBadge.SetParent(newParent, true);
 
                     AddFieldToMultidriver(dofDriver, newParent.ActiveSelf_Field);
-                    Log.Info($"Driving name badge {nameBadge.Name}/{nameBadge.ReferenceID}");
+                    Log.Info($"Driving name badge {nameBadge.ToShortString()}");
                 }
             }
             else
@@ -371,11 +371,11 @@ namespace Restonite
                         {
                             map.StatueMeshRenderer = renderer;
 
-                            Log.Debug($"MeshRenderer {map.NormalMeshRenderer.ReferenceID} linked to {map.StatueMeshRenderer?.ReferenceID ?? RefID.Null}");
+                            Log.Debug($"{map.NormalMeshRenderer.ToLongString()} linked to {map.StatueMeshRenderer.ToLongString()}");
                         }
                         else
                         {
-                            Log.Error($"Couldn't find matching normal MeshRenderer for {renderer.ReferenceID}");
+                            Log.Error($"Couldn't find matching normal MeshRenderer for {renderer.ToLongString()}");
                             error |= true;
                         }
                     }
@@ -383,7 +383,7 @@ namespace Restonite
                     _slotsMap[x.Key] = statue;
                     count++;
 
-                    Log.Debug($"Duplicated {x.Key.Name} to {statue.Name}");
+                    Log.Debug($"Duplicated {x.Key.ToShortString()} to {statue.ToShortString()}");
                 }
             });
 
@@ -401,7 +401,7 @@ namespace Restonite
             {
                 if (material.Slot.Parent == _normalMaterials)
                 {
-                    Log.Debug($"Copying material {material.ReferenceID} from {material.Slot.Name} to {_normalMaterials.Name}");
+                    Log.Debug($"Copying {material.ToLongString()} to {_normalMaterials.ToShortString()}");
                     var newMaterial = (AssetProvider<Material>)_normalMaterials.CopyComponent((AssetProvider<Material>)material);
 
                     ChangeMaterialReferences(material, newMaterial);
@@ -420,7 +420,7 @@ namespace Restonite
 
                 for (int i = 0; i < map.Materials.Count; ++i)
                 {
-                    var name = $"{map.NormalMeshRenderer.Slot.Name}/{map.NormalMeshRenderer.ReferenceID}, material {i}";
+                    var name = $"{map.NormalMeshRenderer.ToLongString()}, material {i}";
 
                     var oldMaterial = map.Materials[i].Normal;
                     var statueType = map.Materials[i].TransitionType;
@@ -428,7 +428,7 @@ namespace Restonite
 
                     if (!oldMaterialToNewNormalMaterialMap.ContainsKey(key))
                     {
-                        Log.Info($"Creating normal material {oldMaterialToNewNormalMaterialMap.Count} for {oldMaterial.ReferenceID} using {statueType}");
+                        Log.Info($"Creating normal material {oldMaterialToNewNormalMaterialMap.Count} for {oldMaterial.ToLongString()} using {statueType}");
 
                         var newSlot = _normalMaterials.AddSlot($"Normal {oldMaterialToNewNormalMaterialMap.Count}");
 
@@ -466,7 +466,7 @@ namespace Restonite
             {
                 if (material != null && material.Slot.Parent == _statueMaterials)
                 {
-                    Log.Debug($"Copying material {material.ReferenceID} from {material.Slot.Name} to {_statueMaterials.Name}");
+                    Log.Debug($"Copying {material.ToLongString()} to {_statueMaterials.ToShortString()}");
                     var newMaterial = (AssetProvider<Material>)_statueMaterials.MoveComponent((AssetProvider<Material>)material);
 
                     ChangeMaterialReferences(material, newMaterial);
@@ -484,7 +484,7 @@ namespace Restonite
 
                 for (int i = 0; i < map.Materials.Count; ++i)
                 {
-                    var name = map.StatueMeshRenderer == null ? "Blinder" : $"{map.StatueMeshRenderer.Slot.Name}/{map.StatueMeshRenderer.ReferenceID}, material {i}";
+                    var name = map.StatueMeshRenderer == null ? "Blinder" : $"{map.StatueMeshRenderer.ToLongString()}, material {i}";
 
                     var normalMaterial = map.Materials[i].Normal;
                     var statueMaterial = map.Materials[i].Statue;
@@ -493,7 +493,7 @@ namespace Restonite
 
                     if (!isBlinder && normalMaterial == null && statueMaterial != null)
                     {
-                        Log.Warn($"{map.NormalMeshRenderer.Slot.Name}/{map.NormalMeshRenderer.ReferenceID}, material {i} is null, skipping statue material");
+                        Log.Warn($"{map.NormalMeshRenderer.ToLongString()}, material {i} is null, skipping statue material");
                         continue;
                     }
 
@@ -556,9 +556,9 @@ namespace Restonite
                     {
                         if (!map.StatueMeshRenderer.Materials[i].IsDriven)
                         {
+                            Log.Debug($"Driving {name} using {key}");
                             var drives = oldMaterialToStatueMaterialMap[key].Drives;
                             drives.Add().ForceLink(map.StatueMeshRenderer.Materials.GetElement(i));
-                            Log.Debug($"Driving {name} using {key}");
                         }
                         else
                         {
@@ -600,7 +600,7 @@ namespace Restonite
             if (AvatarRoot == null)
                 return;
 
-            Log.Info($"=== Reading avatar {AvatarRoot.Name}/{AvatarRoot.ReferenceID}");
+            Log.Info($"=== Reading avatar {AvatarRoot.ToShortString()}");
 
             var children = AvatarRoot.GetAllChildren();
 
@@ -632,7 +632,7 @@ namespace Restonite
 
                     _slotsMap.Add(slot.Value, existingStatueSlot);
 
-                    Log.Debug($"Mapping {slot.Value.Name} to {existingStatueSlot?.Name ?? "null"}");
+                    Log.Debug($"Mapping {slot.Value.ToShortString()} to {existingStatueSlot.ToShortString()}");
                 }
             }
 
@@ -677,10 +677,14 @@ namespace Restonite
                         }).ToList()
                     };
 
-                    Log.Debug($"MeshRenderer {normal.ReferenceID} linked to {statue?.ReferenceID ?? RefID.Null}");
+                    Log.Debug($"Linking {normal.ToLongString()} to {statue.ToLongString()}");
 
-                    foreach (var material in rendererMap.Materials)
-                        Log.Debug($"Material {material.Normal.ReferenceID} linked to {material.Statue?.ReferenceID ?? RefID.Null}");
+                    for (int i = 0; i < rendererMap.Materials.Count; i++)
+                    {
+                        MaterialMap material = rendererMap.Materials[i];
+                        if(material.Statue != null)
+                            Log.Debug($"Material slot {i} with {material.Normal.ToShortString()} linked to {material.Statue.ToShortString()}");
+                    }
 
                     MeshRenderers.Add(rendererMap);
                 }
@@ -693,11 +697,11 @@ namespace Restonite
             var legacySystem = AvatarRoot.FindChildInHierarchy("<color=#dadada>Statuefication</color>");
             var legacyAddons = AvatarRoot.FindChildInHierarchy("<color=#dadada>Statue Add-Ons</color>");
 
-            Log.Debug($"Statue root is {StatueRoot?.ReferenceID ?? RefID.Null}");
-            Log.Debug($"Generated materials is {_generatedMaterials?.ReferenceID ?? RefID.Null}");
-            Log.Debug($"Drivers is {_drivers?.ReferenceID ?? RefID.Null}");
-            Log.Debug($"Legacy system is {legacySystem?.ReferenceID ?? RefID.Null}");
-            Log.Debug($"Legacy addons is {legacyAddons?.ReferenceID ?? RefID.Null}");
+            Log.Debug($"Statue root is {StatueRoot.ToShortString()}");
+            Log.Debug($"Generated materials is {_generatedMaterials.ToShortString()}");
+            Log.Debug($"Drivers is {_drivers.ToShortString()}");
+            Log.Debug($"Legacy system is {legacySystem.ToShortString()}");
+            Log.Debug($"Legacy addons is {legacyAddons.ToShortString()}");
 
             if (StatueRoot != null || (_drivers != null && _generatedMaterials != null))
             {
@@ -713,7 +717,7 @@ namespace Restonite
 
             if (defaultMaterial == null || defaultMaterial.ReferenceID == RefID.Null)
             {
-                var statue0Material = _generatedMaterials?
+                var statue0Material = (IAssetProvider<Material>)_generatedMaterials?
                     .FindChild("Statue Materials")?
                     .FindChild("Statue 0")?
                     .GetComponent<AssetProvider<Material>>();
@@ -724,15 +728,18 @@ namespace Restonite
 
                     foreach (var map in MeshRenderers)
                     {
+                        if (map.NormalMeshRenderer == null && map.StatueMeshRenderer == null)
+                            Log.Debug($"Using {statue0Material.ToShortString()} as blinder material");
+                        else
+                            Log.Debug($"Updating {map.NormalMeshRenderer.ToLongString()} material mappings");
+
                         for (var i = 0; i < map.Materials.Count; i++)
                         {
                             if (map.Materials[i].Statue != statue0Material)
                             {
                                 map.Materials[i].Statue = statue0Material;
-                                if (map.NormalMeshRenderer == null && map.StatueMeshRenderer == null)
-                                    Log.Debug($"Using material {statue0Material.ReferenceID} as blinder material");
-                                else
-                                    Log.Debug($"Material {map.Materials[i].Normal.ReferenceID} linked to {statue0Material.ReferenceID}");
+                                if (map.NormalMeshRenderer != null && map.StatueMeshRenderer != null)
+                                    Log.Debug($"Material slot {i} with {map.Materials[i].Normal.ToShortString()} linked to {statue0Material.ToShortString()}");
                             }
                         }
                     }
@@ -746,15 +753,18 @@ namespace Restonite
             {
                 foreach (var map in MeshRenderers)
                 {
+                    if (map.NormalMeshRenderer == null && map.StatueMeshRenderer == null)
+                        Log.Debug($"Using {defaultMaterial.ToShortString()} as blinder material");
+                    else
+                        Log.Debug($"Updating {map.NormalMeshRenderer.ToLongString()} material mappings");
+
                     for (var i = 0; i < map.Materials.Count; i++)
                     {
                         if (map.Materials[i].Statue != defaultMaterial)
                         {
                             map.Materials[i].Statue = defaultMaterial;
-                            if (map.NormalMeshRenderer == null && map.StatueMeshRenderer == null)
-                                Log.Debug($"Using material {defaultMaterial.ReferenceID} as blinder material");
-                            else
-                                Log.Debug($"Material {map.Materials[i].Normal.ReferenceID} linked to {defaultMaterial.ReferenceID}");
+                            if (map.NormalMeshRenderer != null && map.StatueMeshRenderer != null)
+                                Log.Debug($"Material slot {i} with {map.Materials[i].Normal.ToShortString()} linked to {defaultMaterial.ToShortString()}");
                         }
                     }
                 }
@@ -773,7 +783,7 @@ namespace Restonite
         {
             if (map != null)
             {
-                Log.Info($"Removing MeshRenderer {map.NormalMeshRenderer.ReferenceID}");
+                Log.Info($"Removing {map.NormalMeshRenderer.ToLongString()} from setup");
                 MeshRenderers.Remove(map);
             }
         }
@@ -804,7 +814,7 @@ namespace Restonite
                     var smrsInChildren = map.NormalMeshRenderer.Slot.GetComponentsInChildren<MeshRenderer>();
                     if (smrsInChildren.Exists(x => x != map.NormalMeshRenderer))
                     {
-                        Log.Error($"Slot {map.NormalMeshRenderer.Slot.Name} has nested MeshRenderers, aborting");
+                        Log.Error($"Slot {map.NormalMeshRenderer.Slot.ToShortString()} has nested MeshRenderers, aborting");
                         return false;
                     }
                 }
