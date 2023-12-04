@@ -323,12 +323,12 @@ namespace Restonite
             // This needs to be the case because of behavior if both are 0; if 0, defaults to To
             var displaceMagnitudeFromDriver = destination.AttachComponent<DynamicValueVariableDriver<float>>();
             displaceMagnitudeFromDriver.VariableName.Value = "Avatar/Statue.RadialStatuefy.Config.MagnitudeFrom";
-            displaceMagnitudeFromDriver.DefaultValue.Value = -0.05f;
+            displaceMagnitudeFromDriver.DefaultValue.Value = -0.001f;
             displaceMagnitudeFromDriver.Target.ForceLink(newMaterial.DisplaceMagnitudeFrom);
 
             var displaceMagnitudeToDriver = destination.AttachComponent<DynamicValueVariableDriver<float>>();
             displaceMagnitudeToDriver.VariableName.Value = "Avatar/Statue.RadialStatuefy.Config.MagnitudeTo";
-            displaceMagnitudeToDriver.DefaultValue.Value = 0.05f;
+            displaceMagnitudeToDriver.DefaultValue.Value = 0.001f;
             displaceMagnitudeToDriver.Target.ForceLink(newMaterial.DisplaceMagnitudeTo);
 
             var displaceFromDriver = destination.AttachComponent<DynamicValueVariableDriver<float>>();
