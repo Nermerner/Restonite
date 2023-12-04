@@ -1,4 +1,4 @@
-using Elements.Core;
+﻿using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -84,22 +84,25 @@ namespace Restonite
 
         public void CreateOrUpdateDefaults()
         {
-            Log.Info("=== Creating defaults configuration");
-
-            var durationDefault = _defaults.GetComponent<DynamicValueVariable<float>>(x => x.VariableName.Value == "Avatar/Statue.Duration.Default");
-            if (durationDefault == null)
+            if (_defaults != null)
             {
-                durationDefault = _defaults.AttachComponent<DynamicValueVariable<float>>();
-                durationDefault.VariableName.Value = "Avatar/Statue.Duration.Default";
-                durationDefault.Value.Value = 10;
-            }
+                Log.Info("=== Creating defaults configuration");
 
-            var whisperPersist = _defaults.GetComponent<DynamicValueVariable<bool>>(x => x.VariableName.Value == "Avatar/Statue.Whisper.Persist");
-            if (whisperPersist == null)
-            {
-                whisperPersist = _defaults.AttachComponent<DynamicValueVariable<bool>>();
-                whisperPersist.VariableName.Value = "Avatar/Statue.Whisper.Persist";
-                whisperPersist.Value.Value = true;
+                var durationDefault = _defaults.GetComponent<DynamicValueVariable<float>>(x => x.VariableName.Value == "Avatar/Statue.Duration.Default");
+                if (durationDefault == null)
+                {
+                    durationDefault = _defaults.AttachComponent<DynamicValueVariable<float>>();
+                    durationDefault.VariableName.Value = "Avatar/Statue.Duration.Default";
+                    durationDefault.Value.Value = 10;
+                }
+
+                var whisperPersist = _defaults.GetComponent<DynamicValueVariable<bool>>(x => x.VariableName.Value == "Avatar/Statue.Whisper.Persist");
+                if (whisperPersist == null)
+                {
+                    whisperPersist = _defaults.AttachComponent<DynamicValueVariable<bool>>();
+                    whisperPersist.VariableName.Value = "Avatar/Statue.Whisper.Persist";
+                    whisperPersist.Value.Value = true;
+                }
             }
         }
 
@@ -304,6 +307,7 @@ namespace Restonite
 
             // Find existing slots
             _defaults = StatueRoot.FindChildOrAdd("Defaults");
+            _userCustomization = StatueRoot.GetChildrenWithTag("UpdateOnStatue").FirstOrDefault();
 
             _drivers = StatueRoot.FindChildOrAdd("Drivers");
             _meshes = _drivers.FindChildOrAdd("Meshes");
@@ -581,11 +585,105 @@ namespace Restonite
             StatueRoot.DestroyChildren(filter: x => x.Tag == "CopyToStatue");
 
             // Install the new system
-            systemSlot.GetChildrenWithTag("CopyToStatue").ForEach((childSlot) =>
+            foreach (var copySlot in systemSlot.GetChildrenWithTag("CopyToStatue"))
             {
-                Log.Info($"Adding {childSlot.Name} with tag {childSlot.Tag}");
-                childSlot.Duplicate(StatueRoot);
-            });
+                Log.Info($"Adding {copySlot.ToShortString()} with tag {copySlot.Tag}");
+                copySlot.Duplicate(StatueRoot);
+            }
+
+            var oldDefaults = _defaults.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
+
+            // Update user customization slot
+            if (_userCustomization == null)
+            {
+                var updateSlot = systemSlot.GetChildrenWithTag("UpdateOnStatue").FirstOrDefault();
+
+                if (updateSlot != null)
+                {
+                    Log.Info($"Adding {updateSlot.ToShortString()} with tag {updateSlot.Tag}");
+                    updateSlot.Duplicate(StatueRoot);
+
+                    var dynVars = updateSlot.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
+
+                    // Update existing user customization slots
+                    var updateDynVars = oldDefaults.Join(dynVars,
+                        defaults => defaults.DynamicVariable.VariableName,
+                        system => system.DynamicVariable.VariableName,
+                        (defaults, system) => new { Defaults = defaults, System = system }).ToList();
+                    foreach (var dynVar in updateDynVars)
+                    {
+                        var propertyA = dynVar.Defaults.DynamicVariable.GetType().GetProperty("Value") ?? dynVar.Defaults.DynamicVariable.GetType().GetProperty("Reference");
+                        var propertyB = dynVar.System.DynamicVariable.GetType().GetProperty("Value") ?? dynVar.System.DynamicVariable.GetType().GetProperty("Reference");
+
+                        if (propertyA.PropertyType == propertyB.PropertyType)
+                        {
+                            Log.Info($"Migrating user customization slot for {dynVar.Defaults.DynamicVariable.VariableName}");
+                            propertyA.SetValue(dynVar.Defaults.DynamicVariable, propertyB.GetValue(dynVar.System.DynamicVariable));
+                            dynVar.Defaults.Slot.Name = dynVar.System.Slot.Name;
+                        }
+                    }
+
+                    _defaults?.Destroy();
+                    _defaults = null;
+                }
+            }
+            else
+            {
+                var existingDynVars = _userCustomization.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
+                existingDynVars.AddRange(oldDefaults);
+
+                var updateSlot = systemSlot.GetChildrenWithTag("UpdateOnStatue").FirstOrDefault();
+
+                if (updateSlot != null)
+                {
+                    Log.Info($"Updating {updateSlot.ToShortString()} with tag {updateSlot.Tag}");
+                    var dynVars = updateSlot.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
+
+                    // Clean up old user customization slots no longer present in the system
+                    var oldDynVars = existingDynVars.Where(x => !dynVars.Exists(y => y.DynamicVariable.VariableName == x.DynamicVariable.VariableName)).ToList();
+                    foreach (var dynVar in oldDynVars)
+                    {
+                        Log.Info($"Removing old user customization slot for {dynVar.DynamicVariable.VariableName}");
+                        dynVar.Slot.Destroy();
+                        existingDynVars.Remove(dynVar);
+                    }
+
+                    // Add new user customization slots present in the system
+                    var newDynVars = dynVars.Where(x => !existingDynVars.Exists(y => y.DynamicVariable.VariableName == x.DynamicVariable.VariableName)).ToList();
+                    foreach (var dynVar in newDynVars)
+                    {
+                        Log.Info($"Adding new user customization slot for {dynVar.DynamicVariable.VariableName}");
+                        dynVar.Slot.Duplicate(_userCustomization);
+                    }
+
+                    // Update existing user customization slots
+                    var updateDynVars = existingDynVars.Join(dynVars,
+                        existing => existing.DynamicVariable.VariableName,
+                        system => system.DynamicVariable.VariableName,
+                        (existing, system) => new { Existing = existing, System = system }).ToList();
+                    foreach (var dynVar in updateDynVars)
+                    {
+                        var propertyA = dynVar.Existing.DynamicVariable.GetType().GetProperty("Value") ?? dynVar.Existing.DynamicVariable.GetType().GetProperty("Reference");
+                        var propertyB = dynVar.System.DynamicVariable.GetType().GetProperty("Value") ?? dynVar.System.DynamicVariable.GetType().GetProperty("Reference");
+
+                        if (propertyA.PropertyType == propertyB.PropertyType)
+                        {
+                            Log.Info($"Updating user customization slot for {dynVar.Existing.DynamicVariable.VariableName}");
+                            propertyA.SetValue(dynVar.Existing.DynamicVariable, propertyB.GetValue(dynVar.System.DynamicVariable));
+                            dynVar.Existing.Slot.Name = dynVar.System.Slot.Name;
+                        }
+                        else
+                        {
+                            Log.Warn($"User customization slot for {dynVar.Existing.DynamicVariable.VariableName} have differing data types, overwriting");
+                            dynVar.Existing.Slot.Destroy();
+                            dynVar.System.Slot.Duplicate(_userCustomization);
+                        }
+                    }
+
+                    _defaults?.Destroy();
+                    _defaults = null;
+                }
+            }
         }
 
         public void ReadAvatarRoot(Slot newAvatarRoot, IAssetProvider<Material> defaultMaterial, bool skinnedMeshRenderersOnly, bool useDefaultAsIs, StatueType transitionType)
@@ -679,10 +777,17 @@ namespace Restonite
 
                     Log.Debug($"Linking {normal.ToLongString()} to {statue.ToLongString()}");
 
+                    if (normal.Materials.IsDriven && normal.Materials.IsLinked)
+                    {
+                        var element = normal.Materials.ActiveLink as SyncElement;
+                        if (element.Component is MaterialSet materialSet)
+                            Log.Debug($"{normal.ToLongString()} has {materialSet.ToLongString()} with {materialSet.Sets.Count} sets");
+                    }
+
                     for (int i = 0; i < rendererMap.Materials.Count; i++)
                     {
                         MaterialMap material = rendererMap.Materials[i];
-                        if(material.Statue != null)
+                        if (material.Statue != null)
                             Log.Debug($"Material slot {i} with {material.Normal.ToShortString()} linked to {material.Statue.ToShortString()}");
                     }
 
@@ -865,6 +970,7 @@ namespace Restonite
         private bool _skinnedMeshRenderersOnly;
         private Dictionary<Slot, Slot> _slotsMap = new Dictionary<Slot, Slot>();
         private Slot _statueMaterials;
+        private Slot _userCustomization;
 
         #endregion
 
