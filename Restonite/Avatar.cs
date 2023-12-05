@@ -22,6 +22,34 @@ namespace Restonite
 
         #region Public Methods
 
+        public void CollectMaterials()
+        {
+            Log.Info("=== Collecting avatar materials");
+
+            var normalMaterials = _scratchSpace.AddSlot("Normal Materials");
+            var statueMaterials = _scratchSpace.AddSlot("Statue Materials");
+
+            // Move all materials to scratch space slot temporarily
+            foreach (var material in MeshRenderers.SelectMany(x => x.MaterialSets).SelectMany(x => x))
+            {
+                if (material.Normal != null && material.Normal.Slot != normalMaterials)
+                {
+                    Log.Debug($"Copying {material.Normal.ToLongString()} to {normalMaterials.ToShortString()}");
+                    var newMaterial = (AssetProvider<Material>)normalMaterials.CopyComponent((AssetProvider<Material>)material.Normal);
+
+                    ChangeMaterialReferences(material.Normal, newMaterial);
+                }
+
+                if (material.Statue != null && material.Statue.Slot != statueMaterials)
+                {
+                    Log.Debug($"Copying {material.Statue.ToLongString()} to {statueMaterials.ToShortString()}");
+                    var newMaterial = (AssetProvider<Material>)statueMaterials.CopyComponent((AssetProvider<Material>)material.Statue);
+
+                    ChangeMaterialReferences(material.Statue, newMaterial);
+                }
+            }
+        }
+
         public void CopyBlendshapes()
         {
             Log.Info("=== Creating drivers between normal/statue slots and blend shapes");
@@ -352,11 +380,10 @@ namespace Restonite
         public bool DuplicateMeshes()
         {
             var count = 0;
-            var error = false;
 
             Log.Info("=== Duplicating normal meshes to statue meshes");
 
-            _slotsMap.ToList().ForEach(x =>
+            foreach (var x in _slotsMap.ToList())
             {
                 if (x.Value == null)
                 {
@@ -380,7 +407,7 @@ namespace Restonite
                         else
                         {
                             Log.Error($"Couldn't find matching normal MeshRenderer for {renderer.ToLongString()}");
-                            error |= true;
+                            return false;
                         }
                     }
 
@@ -389,192 +416,199 @@ namespace Restonite
 
                     Log.Debug($"Duplicated {x.Key.ToShortString()} to {statue.ToShortString()}");
                 }
-            });
+            }
+
+            foreach(var map in MeshRenderers)
+            {
+                if(map.NormalMaterialSet != null && map.StatueMaterialSet == null)
+                {
+                    var slot = map.StatueMeshRenderer.Slot;
+
+                    map.StatueMaterialSet = slot.AttachComponent<MaterialSet>();
+                    map.StatueMaterialSet.Target.ForceLink(map.StatueMeshRenderer.Materials);
+
+                    foreach (var setNormal in map.NormalMaterialSet.Sets)
+                    {
+                        var setStatue = map.StatueMaterialSet.Sets.Add();
+                        foreach (var mat in setNormal)
+                            setStatue.Add();
+                    }
+
+                    var indexValueDriver = slot.AttachComponent<ValueCopy<int>>();
+                    indexValueDriver.Source.Value = map.NormalMaterialSet.ActiveSetIndex.ReferenceID;
+                    indexValueDriver.Target.Value = map.StatueMaterialSet.ActiveSetIndex.ReferenceID;
+                }
+            }
 
             Log.Info($"Duplicated {count} statue slots");
 
-            return !error;
+            return true;
         }
 
         public void GenerateNormalMaterials()
         {
             Log.Info("=== Generating normal materials");
 
-            // Move all statue materials to slot temporarily
-            foreach (var material in MeshRenderers.SelectMany(x => x.Materials).Select(x => x.Normal).Where(x => x != null))
-            {
-                if (material.Slot.Parent == _normalMaterials)
-                {
-                    Log.Debug($"Copying {material.ToLongString()} to {_normalMaterials.ToShortString()}");
-                    var newMaterial = (AssetProvider<Material>)_normalMaterials.CopyComponent((AssetProvider<Material>)material);
-
-                    ChangeMaterialReferences(material, newMaterial);
-                }
-            }
-
             // Destroy all existing children
             _normalMaterials.DestroyChildren();
 
-            var oldMaterialToNewNormalMaterialMap = new Dictionary<string, IAssetProvider<Material>>();
             // Create alpha material and swap normal material for it
-            MeshRenderers.ForEach((map) =>
+            var oldMaterialToNewNormalMaterialMap = new Dictionary<string, IAssetProvider<Material>>();
+            for (int i = 0; i < MeshRenderers.Count; i++)
             {
+                MeshRendererMap map = MeshRenderers[i];
+
                 if (map.NormalMeshRenderer == null)
-                    return;
+                    continue;
 
-                for (int i = 0; i < map.Materials.Count; ++i)
+                for (int set = 0; set < map.MaterialSets.Count; set++)
                 {
-                    var name = $"{map.NormalMeshRenderer.ToLongString()}, material {i}";
-
-                    var oldMaterial = map.Materials[i].Normal;
-                    var statueType = map.Materials[i].TransitionType;
-                    var key = $"{oldMaterial.ReferenceID}_{statueType}";
-
-                    if (!oldMaterialToNewNormalMaterialMap.ContainsKey(key))
+                    for (int slot = 0; slot < map.MaterialSets[set].Count; ++slot)
                     {
-                        Log.Info($"Creating normal material {oldMaterialToNewNormalMaterialMap.Count} for {oldMaterial.ToLongString()} using {statueType}");
+                        var name = $"{map.NormalMeshRenderer.ToLongString()}, material set {set}, slot {slot}";
 
-                        var newSlot = _normalMaterials.AddSlot($"Normal {oldMaterialToNewNormalMaterialMap.Count}");
+                        var oldMaterial = map.MaterialSets[set][slot].Normal;
+                        var statueType = map.MaterialSets[set][slot].TransitionType;
+                        var key = $"{oldMaterial.ReferenceID}_{statueType}";
 
-                        // Create material based on transition type
-                        var newMaterial = MaterialHelpers.CreateAlphaMaterial(oldMaterial, statueType, newSlot);
+                        if (!oldMaterialToNewNormalMaterialMap.ContainsKey(key))
+                        {
+                            Log.Info($"Creating normal material {oldMaterialToNewNormalMaterialMap.Count} for {oldMaterial.ToLongString()} using {statueType}");
 
-                        // Add dynvar with information about what transition type was used
-                        var typeDynVar = newSlot.AttachComponent<DynamicValueVariable<string>>();
-                        typeDynVar.VariableName.Value = $"Avatar/Statue.TransitionType{oldMaterialToNewNormalMaterialMap.Count}";
-                        typeDynVar.Value.Value = $"{statueType}";
+                            var newSlot = _normalMaterials.AddSlot($"Normal {oldMaterialToNewNormalMaterialMap.Count}");
 
-                        oldMaterialToNewNormalMaterialMap[key] = newMaterial;
+                            // Create material based on transition type
+                            var newMaterial = MaterialHelpers.CreateAlphaMaterial(oldMaterial, statueType, newSlot);
+
+                            // Add dynvar with information about what transition type was used
+                            var typeDynVar = newSlot.AttachComponent<DynamicValueVariable<string>>();
+                            typeDynVar.VariableName.Value = $"Avatar/Statue.TransitionType{oldMaterialToNewNormalMaterialMap.Count}";
+                            typeDynVar.Value.Value = $"{statueType}";
+
+                            oldMaterialToNewNormalMaterialMap[key] = newMaterial;
+                        }
+                        else
+                        {
+                            Log.Info($"Material on {name} was already created");
+                        }
+
+                        var materialSlot = map.NormalMeshRenderer.Materials.GetElement(slot);
+
+                        if (map.NormalMaterialSet != null)
+                            map.NormalMaterialSet.Sets[set][slot] = oldMaterialToNewNormalMaterialMap[key];
+                        else if (!materialSlot.IsDriven && !materialSlot.IsLinked)
+                            map.NormalMeshRenderer.Materials[slot] = oldMaterialToNewNormalMaterialMap[key];
+                        else
+                            Log.Warn($"{name} is already driven");
                     }
-                    else
-                    {
-                        Log.Info($"Material on {name} was already created");
-                    }
-
-                    if (!map.NormalMeshRenderer.Materials[i].IsDriven)
-                        map.NormalMeshRenderer.Materials[i] = oldMaterialToNewNormalMaterialMap[key];
-                    else
-                        Log.Warn($"{name} is already driven");
                 }
-            });
-
-            _normalMaterials.RemoveAllComponents(_ => true);
+            }
         }
 
         public void GenerateStatueMaterials()
         {
             Log.Info("=== Generating statue materials");
 
-            // Move all statue materials to slot temporarily
-            foreach (var material in MeshRenderers.SelectMany(x => x.Materials).Select(x => x.Statue))
-            {
-                if (material != null && material.Slot.Parent == _statueMaterials)
-                {
-                    Log.Debug($"Copying {material.ToLongString()} to {_statueMaterials.ToShortString()}");
-                    var newMaterial = (AssetProvider<Material>)_statueMaterials.MoveComponent((AssetProvider<Material>)material);
-
-                    ChangeMaterialReferences(material, newMaterial);
-                }
-            }
-
             // Destroy all existing children
             _statueMaterials.DestroyChildren();
 
             // Create Material objects for each statue material
             var oldMaterialToStatueMaterialMap = new Dictionary<RefID, ReferenceMultiDriver<IAssetProvider<Material>>>();
-            MeshRenderers.ForEach((map) =>
+            for (int i = 0; i < MeshRenderers.Count; i++)
             {
+                MeshRendererMap map = MeshRenderers[i];
                 var isBlinder = map.NormalMeshRenderer == null && map.StatueMeshRenderer == null;
 
-                for (int i = 0; i < map.Materials.Count; ++i)
+                for (int set = 0; set < map.MaterialSets.Count; ++set)
                 {
-                    var name = map.StatueMeshRenderer == null ? "Blinder" : $"{map.StatueMeshRenderer.ToLongString()}, material {i}";
-
-                    var normalMaterial = map.Materials[i].Normal;
-                    var statueMaterial = map.Materials[i].Statue;
-                    var defaultMaterialAsIs = isBlinder || map.Materials[i].UseAsIs;
-                    var key = defaultMaterialAsIs ? statueMaterial.ReferenceID : normalMaterial.ReferenceID;
-
-                    if (!isBlinder && normalMaterial == null && statueMaterial != null)
+                    for (int slot = 0; slot < map.MaterialSets[set].Count; ++slot)
                     {
-                        Log.Warn($"{map.NormalMeshRenderer.ToLongString()}, material {i} is null, skipping statue material");
-                        continue;
-                    }
+                        var name = map.StatueMeshRenderer == null ? "Blinder" : $"{map.StatueMeshRenderer.ToLongString()}, material set {set}, slot {slot}";
 
-                    if (!oldMaterialToStatueMaterialMap.ContainsKey(key))
-                    {
-                        Log.Info($"Creating statue material {oldMaterialToStatueMaterialMap.Count} as duplicate of {key}");
-                        Log.Debug(defaultMaterialAsIs ? "Using material as-is" : "Merging with normal material maps");
+                        var normalMaterial = map.MaterialSets[set][slot].Normal;
+                        var statueMaterial = map.MaterialSets[set][slot].Statue;
+                        var defaultMaterialAsIs = isBlinder || map.MaterialSets[set][slot].UseAsIs;
+                        var key = defaultMaterialAsIs ? statueMaterial.ReferenceID : normalMaterial.ReferenceID;
 
-                        // If assigned == null, use default
-
-                        // Create a new statue material object (i.e. drives material slot on statue
-                        // SMR, has default material with normal map)
-                        var newMaterialHolder = _statueMaterials.AddSlot($"Statue {oldMaterialToStatueMaterialMap.Count}");
-
-                        var newDefaultMaterialRefId = defaultMaterialAsIs
-                            ? newMaterialHolder.CopyComponent((AssetProvider<Material>)statueMaterial).ReferenceID
-                            : MaterialHelpers.CreateStatueMaterial(normalMaterial, statueMaterial, newMaterialHolder).ReferenceID;
-
-                        // Assigns Statue.Material.Assigned to equality
-                        var assignedMaterialDriver = newMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
-                        assignedMaterialDriver.VariableName.Value = "Avatar/Statue.Material.Assigned";
-
-                        var assignedMaterialField = newMaterialHolder.AttachComponent<ReferenceField<IAssetProvider<Material>>>();
-                        assignedMaterialDriver.Target.ForceLink(assignedMaterialField.Reference);
-
-                        // Assigns Statue.Material.Assigned to boolean
-                        var bassignedMaterialDriver = newMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
-                        bassignedMaterialDriver.VariableName.Value = "Avatar/Statue.Material.Assigned";
-
-                        // Decides whether we use default or assigned
-                        var booleanReferenceDriver = newMaterialHolder.AttachComponent<BooleanReferenceDriver<IAssetProvider<Material>>>();
-                        booleanReferenceDriver.TrueTarget.Value = newDefaultMaterialRefId;
-                        bassignedMaterialDriver.Target.ForceLink(booleanReferenceDriver.FalseTarget);
-
-                        // Checks if assigned material is null and writes that value to boolean ref driver
-                        var equalityDriver = newMaterialHolder.AttachComponent<ReferenceEqualityDriver<IAssetProvider<Material>>>();
-                        equalityDriver.TargetReference.Target = assignedMaterialField.Reference;
-                        equalityDriver.Target.ForceLink(booleanReferenceDriver.State);
-
-                        // Makes material accessible elsewhere
-                        var dynMaterialVariable = newMaterialHolder.AttachComponent<DynamicReferenceVariable<IAssetProvider<Material>>>();
-                        dynMaterialVariable.VariableName.Value = $"Avatar/Statue.Material{oldMaterialToStatueMaterialMap.Count}";
-
-                        // boolean ref driver drives this, which drives everything else
-                        var multiDriver = newMaterialHolder.AttachComponent<ReferenceMultiDriver<IAssetProvider<Material>>>();
-                        booleanReferenceDriver.TargetReference.ForceLink(multiDriver.Reference);
-
-                        // Drive that dynvar
-                        multiDriver.Drives.Add();
-                        multiDriver.Drives[0].ForceLink(dynMaterialVariable.Reference);
-
-                        oldMaterialToStatueMaterialMap.Add(key, multiDriver);
-                    }
-                    else
-                    {
-                        Log.Info($"Material on {name} was already created");
-                    }
-
-                    if (map.StatueMeshRenderer != null)
-                    {
-                        if (!map.StatueMeshRenderer.Materials[i].IsDriven)
+                        if (!isBlinder && normalMaterial == null && statueMaterial != null)
                         {
-                            Log.Debug($"Driving {name} using {key}");
-                            var drives = oldMaterialToStatueMaterialMap[key].Drives;
-                            drives.Add().ForceLink(map.StatueMeshRenderer.Materials.GetElement(i));
+                            Log.Warn($"{map.NormalMeshRenderer.ToLongString()}, material {slot} is null, skipping statue material");
+                            continue;
+                        }
+
+                        if (!oldMaterialToStatueMaterialMap.ContainsKey(key))
+                        {
+                            Log.Info($"Creating statue material {oldMaterialToStatueMaterialMap.Count} as duplicate of {key}");
+                            Log.Debug(defaultMaterialAsIs ? "Using material as-is" : "Merging with normal material maps");
+
+                            // If assigned == null, use default
+
+                            // Create a new statue material object (i.e. drives material slot on
+                            // statue SMR, has default material with normal map)
+                            var newMaterialHolder = _statueMaterials.AddSlot($"Statue {oldMaterialToStatueMaterialMap.Count}");
+
+                            var newDefaultMaterialRefId = defaultMaterialAsIs
+                                ? newMaterialHolder.CopyComponent((AssetProvider<Material>)statueMaterial).ReferenceID
+                                : MaterialHelpers.CreateStatueMaterial(normalMaterial, statueMaterial, newMaterialHolder).ReferenceID;
+
+                            // Assigns Statue.Material.Assigned to equality
+                            var assignedMaterialDriver = newMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
+                            assignedMaterialDriver.VariableName.Value = "Avatar/Statue.Material.Assigned";
+
+                            var assignedMaterialField = newMaterialHolder.AttachComponent<ReferenceField<IAssetProvider<Material>>>();
+                            assignedMaterialDriver.Target.ForceLink(assignedMaterialField.Reference);
+
+                            // Assigns Statue.Material.Assigned to boolean
+                            var bassignedMaterialDriver = newMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
+                            bassignedMaterialDriver.VariableName.Value = "Avatar/Statue.Material.Assigned";
+
+                            // Decides whether we use default or assigned
+                            var booleanReferenceDriver = newMaterialHolder.AttachComponent<BooleanReferenceDriver<IAssetProvider<Material>>>();
+                            booleanReferenceDriver.TrueTarget.Value = newDefaultMaterialRefId;
+                            bassignedMaterialDriver.Target.ForceLink(booleanReferenceDriver.FalseTarget);
+
+                            // Checks if assigned material is null and writes that value to boolean
+                            // ref driver
+                            var equalityDriver = newMaterialHolder.AttachComponent<ReferenceEqualityDriver<IAssetProvider<Material>>>();
+                            equalityDriver.TargetReference.Target = assignedMaterialField.Reference;
+                            equalityDriver.Target.ForceLink(booleanReferenceDriver.State);
+
+                            // Makes material accessible elsewhere
+                            var dynMaterialVariable = newMaterialHolder.AttachComponent<DynamicReferenceVariable<IAssetProvider<Material>>>();
+                            dynMaterialVariable.VariableName.Value = $"Avatar/Statue.Material{oldMaterialToStatueMaterialMap.Count}";
+
+                            // boolean ref driver drives this, which drives everything else
+                            var multiDriver = newMaterialHolder.AttachComponent<ReferenceMultiDriver<IAssetProvider<Material>>>();
+                            booleanReferenceDriver.TargetReference.ForceLink(multiDriver.Reference);
+
+                            // Drive that dynvar
+                            multiDriver.Drives.Add();
+                            multiDriver.Drives[0].ForceLink(dynMaterialVariable.Reference);
+
+                            oldMaterialToStatueMaterialMap.Add(key, multiDriver);
                         }
                         else
                         {
-                            Log.Warn($"{name} is already driven");
+                            Log.Info($"Material on {name} was already created");
                         }
+
+                        if (map.StatueMeshRenderer != null && slot < map.StatueMeshRenderer.Materials.Count)
+                        {
+                            var materialSlot = map.StatueMeshRenderer.Materials.GetElement(slot);
+                            var drives = oldMaterialToStatueMaterialMap[key].Drives;
+
+                            if (map.StatueMaterialSet != null)
+                                drives.Add().ForceLink(map.StatueMaterialSet.Sets[set].GetElement(slot));
+                            else if (!materialSlot.IsDriven && !materialSlot.IsLinked)
+                                drives.Add().ForceLink(materialSlot);
+                            else
+                                Log.Warn($"{name} is already driven");
+                        }
+
+                        // Thanks Dann :)
                     }
-
-                    // Thanks Dann :)
                 }
-            });
-
-            _statueMaterials.RemoveAllComponents(_ => true);
+            }
         }
 
         public void InstallRemasterSystem(Slot systemSlot)
@@ -702,6 +736,64 @@ namespace Restonite
 
             var children = AvatarRoot.GetAllChildren();
 
+            StatueRoot = FindSlot(children, slot => slot.FindChild("Drivers") != null && slot.FindChild("Generated Materials") != null, "Statue", "StatueSystemSetupSlot");
+            _generatedMaterials = FindSlot(children, slot => slot.FindChild("Statue Materials") != null && slot.FindChild("Normal Materials") != null, "Generated Materials");
+            _drivers = FindSlot(children, slot => slot.FindChild("Avatar/Statue.BodyNormal") != null, "Drivers");
+
+            var legacySystem = AvatarRoot.FindChildInHierarchy("<color=#dadada>Statuefication</color>");
+            var legacyAddons = AvatarRoot.FindChildInHierarchy("<color=#dadada>Statue Add-Ons</color>");
+
+            Log.Debug($"Statue root is {StatueRoot.ToShortString()}");
+            Log.Debug($"Generated materials is {_generatedMaterials.ToShortString()}");
+            Log.Debug($"Drivers is {_drivers.ToShortString()}");
+            Log.Debug($"Legacy system is {legacySystem.ToShortString()}");
+            Log.Debug($"Legacy addons is {legacyAddons.ToShortString()}");
+
+            if (StatueRoot != null || (_drivers != null && _generatedMaterials != null))
+            {
+                HasExistingSystem = true;
+                Log.Info("Avatar has existing Remaster system");
+            }
+
+            if (legacySystem != null || legacyAddons != null)
+            {
+                HasLegacySystem = true;
+                Log.Info("Avatar has legacy system installed");
+            }
+
+            var statue0Material = (IAssetProvider<Material>)_generatedMaterials?
+                .FindChild("Statue Materials")?
+                .FindChild("Statue 0")?
+                .GetComponent<AssetProvider<Material>>();
+
+            if ((defaultMaterial == null || defaultMaterial.ReferenceID == RefID.Null) && statue0Material != null)
+            {
+                defaultMaterial = statue0Material;
+                Log.Debug($"Using existing default statue material, {statue0Material.ToShortString()}");
+            }
+            else if (defaultMaterial != null && defaultMaterial.ReferenceID != RefID.Null)
+            {
+                Log.Info($"Using user supplied default statue material, {defaultMaterial.ToShortString()}");
+            }
+            else
+            {
+                Log.Warn("Couldn't find a material to use for default statue material");
+            }
+
+            MeshRenderers.Add(new MeshRendererMap
+            {
+                MaterialSets = new List<List<MaterialMap>>()
+                    {
+                        new List<MaterialMap>()
+                        {
+                            new MaterialMap
+                            {
+                                Statue = defaultMaterial,
+                            }
+                        }
+                    }
+            });
+
             var renderers = (skinnedMeshRenderersOnly
                 ? AvatarRoot.GetComponentsInChildren<SkinnedMeshRenderer>().Cast<MeshRenderer>()
                 : AvatarRoot.GetComponentsInChildren<MeshRenderer>()
@@ -747,17 +839,6 @@ namespace Restonite
                     : map.Value?.GetComponentsInChildren<MeshRenderer>() ?? Enumerable.Empty<MeshRenderer>()
                     ).ToList();
 
-                MeshRenderers.Add(new MeshRendererMap
-                {
-                    Materials = new List<MaterialMap>()
-                        {
-                            new MaterialMap
-                            {
-                                Statue = defaultMaterial,
-                            }
-                        }
-                });
-
                 foreach (var normal in normalRenderers)
                 {
                     var statue = statueRenderers.Find(x => x.Mesh.Value == normal.Mesh.Value);
@@ -766,13 +847,6 @@ namespace Restonite
                     {
                         NormalMeshRenderer = normal,
                         StatueMeshRenderer = statue,
-                        Materials = normal.Materials.Select(x => new MaterialMap
-                        {
-                            Normal = x,
-                            Statue = defaultMaterial,
-                            TransitionType = transitionType,
-                            UseAsIs = useDefaultAsIs,
-                        }).ToList()
                     };
 
                     Log.Debug($"Linking {normal.ToLongString()} to {statue.ToLongString()}");
@@ -781,100 +855,58 @@ namespace Restonite
                     {
                         var element = normal.Materials.ActiveLink as SyncElement;
                         if (element.Component is MaterialSet materialSet)
-                            Log.Debug($"{normal.ToLongString()} has {materialSet.ToLongString()} with {materialSet.Sets.Count} sets");
+                        {
+                            rendererMap.NormalMaterialSet = materialSet;
+                            Log.Debug($"--> Normal MeshRenderer has {materialSet.ToShortString()} with {materialSet.Sets.Count} sets");
+                        }
                     }
 
-                    for (int i = 0; i < rendererMap.Materials.Count; i++)
+                    if (statue?.Materials.IsDriven == true && statue?.Materials.IsLinked == true)
                     {
-                        MaterialMap material = rendererMap.Materials[i];
-                        if (material.Statue != null)
-                            Log.Debug($"Material slot {i} with {material.Normal.ToShortString()} linked to {material.Statue.ToShortString()}");
+                        var element = statue.Materials.ActiveLink as SyncElement;
+                        if (element.Component is MaterialSet materialSet)
+                        {
+                            rendererMap.StatueMaterialSet = materialSet;
+                            Log.Debug($"--> Statue MeshRenderer has {materialSet.ToShortString()} with {materialSet.Sets.Count} sets");
+                        }
+                    }
+
+                    if (rendererMap.NormalMaterialSet != null)
+                    {
+                        rendererMap.MaterialSets = rendererMap.NormalMaterialSet.Sets.Select(set => set.Select(material => new MaterialMap
+                        {
+                            Normal = material,
+                            Statue = defaultMaterial,
+                            TransitionType = transitionType,
+                            UseAsIs = useDefaultAsIs,
+                        }).ToList()).ToList();
+                    }
+                    else
+                    {
+                        rendererMap.MaterialSets = new List<List<MaterialMap>>()
+                        {
+                            normal.Materials.Select(x => new MaterialMap
+                            {
+                                Normal = x,
+                                Statue = defaultMaterial,
+                                TransitionType = transitionType,
+                                UseAsIs = useDefaultAsIs,
+                            }).ToList()
+                        };
+                    }
+
+                    for (int set = 0; set < rendererMap.MaterialSets.Count; set++)
+                    {
+                        for (int i = 0; i < rendererMap.MaterialSets[set].Count; i++)
+                        {
+                            MaterialMap material = rendererMap.MaterialSets[set][i];
+                            if (material.Statue != null)
+                                Log.Debug($"--> Material set {set}, slot {i} with {material.Normal.ToShortString()} linked to {material.Statue.ToShortString()}");
+                        }
                     }
 
                     MeshRenderers.Add(rendererMap);
                 }
-            }
-
-            StatueRoot = FindSlot(children, slot => slot.FindChild("Drivers") != null && slot.FindChild("Generated Materials") != null, "Statue", "StatueSystemSetupSlot");
-            _generatedMaterials = FindSlot(children, slot => slot.FindChild("Statue Materials") != null && slot.FindChild("Normal Materials") != null, "Generated Materials");
-            _drivers = FindSlot(children, slot => slot.FindChild("Avatar/Statue.BodyNormal") != null, "Drivers");
-
-            var legacySystem = AvatarRoot.FindChildInHierarchy("<color=#dadada>Statuefication</color>");
-            var legacyAddons = AvatarRoot.FindChildInHierarchy("<color=#dadada>Statue Add-Ons</color>");
-
-            Log.Debug($"Statue root is {StatueRoot.ToShortString()}");
-            Log.Debug($"Generated materials is {_generatedMaterials.ToShortString()}");
-            Log.Debug($"Drivers is {_drivers.ToShortString()}");
-            Log.Debug($"Legacy system is {legacySystem.ToShortString()}");
-            Log.Debug($"Legacy addons is {legacyAddons.ToShortString()}");
-
-            if (StatueRoot != null || (_drivers != null && _generatedMaterials != null))
-            {
-                HasExistingSystem = true;
-                Log.Info("Avatar has existing Remaster system");
-            }
-
-            if (legacySystem != null || legacyAddons != null)
-            {
-                HasLegacySystem = true;
-                Log.Info("Avatar has legacy system installed");
-            }
-
-            if (defaultMaterial == null || defaultMaterial.ReferenceID == RefID.Null)
-            {
-                var statue0Material = (IAssetProvider<Material>)_generatedMaterials?
-                    .FindChild("Statue Materials")?
-                    .FindChild("Statue 0")?
-                    .GetComponent<AssetProvider<Material>>();
-
-                if (statue0Material != null)
-                {
-                    Log.Info("Using existing avatar default statue material");
-
-                    foreach (var map in MeshRenderers)
-                    {
-                        if (map.NormalMeshRenderer == null && map.StatueMeshRenderer == null)
-                            Log.Debug($"Using {statue0Material.ToShortString()} as blinder material");
-                        else
-                            Log.Debug($"Updating {map.NormalMeshRenderer.ToLongString()} material mappings");
-
-                        for (var i = 0; i < map.Materials.Count; i++)
-                        {
-                            if (map.Materials[i].Statue != statue0Material)
-                            {
-                                map.Materials[i].Statue = statue0Material;
-                                if (map.NormalMeshRenderer != null && map.StatueMeshRenderer != null)
-                                    Log.Debug($"Material slot {i} with {map.Materials[i].Normal.ToShortString()} linked to {statue0Material.ToShortString()}");
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    Log.Warn("Couldn't find a material to use for default statue material");
-                }
-            }
-            else
-            {
-                foreach (var map in MeshRenderers)
-                {
-                    if (map.NormalMeshRenderer == null && map.StatueMeshRenderer == null)
-                        Log.Debug($"Using {defaultMaterial.ToShortString()} as blinder material");
-                    else
-                        Log.Debug($"Updating {map.NormalMeshRenderer.ToLongString()} material mappings");
-
-                    for (var i = 0; i < map.Materials.Count; i++)
-                    {
-                        if (map.Materials[i].Statue != defaultMaterial)
-                        {
-                            map.Materials[i].Statue = defaultMaterial;
-                            if (map.NormalMeshRenderer != null && map.StatueMeshRenderer != null)
-                                Log.Debug($"Material slot {i} with {map.Materials[i].Normal.ToShortString()} linked to {defaultMaterial.ToShortString()}");
-                        }
-                    }
-                }
-
-                Log.Info("Using user supplied default statue material");
             }
         }
 
@@ -890,7 +922,14 @@ namespace Restonite
             {
                 Log.Info($"Removing {map.NormalMeshRenderer.ToLongString()} from setup");
                 MeshRenderers.Remove(map);
+                if (!MeshRenderers.Exists(x => x.NormalMeshRenderer?.Slot == map.NormalMeshRenderer.Slot))
+                    _slotsMap.Remove(map.NormalMeshRenderer.Slot);
             }
+        }
+
+        public void SetScratchSpace(Slot scratchSpace)
+        {
+            _scratchSpace = scratchSpace;
         }
 
         public void SetupRootDynVar()
@@ -924,32 +963,37 @@ namespace Restonite
                     }
                 }
 
-                foreach (var material in map.Materials)
+                for (int set = 0; set < map.MaterialSets.Count; set++)
                 {
-                    if (material.Normal != null)
+                    for (int i = 0; i < map.MaterialSets[set].Count; i++)
                     {
-                        // Check for incompatible transition types for materials
-                        if ((material.TransitionType == StatueType.PlaneSlicer || material.TransitionType == StatueType.RadialSlicer)
-                            && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular))
-                        {
-                            Log.Error($"{material.GetType().Name} does not support {material.TransitionType}, aborting");
-                            return false;
-                        }
-                        else if ((material.TransitionType == StatueType.AlphaFade || material.TransitionType == StatueType.AlphaCutout)
-                            && !(material.Normal is PBS_DualSidedMetallic) && !(material.Normal is PBS_DualSidedSpecular)
-                            && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular)
-                            && !(material.Normal is XiexeToonMaterial))
-                        {
-                            Log.Error($"{material.GetType().Name} does not support {material.TransitionType}, aborting");
-                            return false;
-                        }
-                    }
+                        var material = map.MaterialSets[set][i];
 
-                    // Check for missing statue materials
-                    if (material.Statue == null || material.Statue.ReferenceID == RefID.Null)
-                    {
-                        Log.Error("Missing default statue material for some material slots, aborting");
-                        return false;
+                        if (material.Normal != null)
+                        {
+                            // Check for incompatible transition types for materials
+                            if ((material.TransitionType == StatueType.PlaneSlicer || material.TransitionType == StatueType.RadialSlicer)
+                                && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular))
+                            {
+                                Log.Error($"{material.GetType().Name} does not support {material.TransitionType}, aborting");
+                                return false;
+                            }
+                            else if ((material.TransitionType == StatueType.AlphaFade || material.TransitionType == StatueType.AlphaCutout)
+                                && !(material.Normal is PBS_DualSidedMetallic) && !(material.Normal is PBS_DualSidedSpecular)
+                                && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular)
+                                && !(material.Normal is XiexeToonMaterial))
+                            {
+                                Log.Error($"{material.GetType().Name} does not support {material.TransitionType}, aborting");
+                                return false;
+                            }
+                        }
+
+                        // Check for missing statue materials
+                        if (material.Statue == null || material.Statue.ReferenceID == RefID.Null)
+                        {
+                            Log.Error("Missing default statue material for some material slots, aborting");
+                            return false;
+                        }
                     }
                 }
             }
@@ -967,6 +1011,7 @@ namespace Restonite
         private Slot _generatedMaterials;
         private Slot _meshes;
         private Slot _normalMaterials;
+        private Slot _scratchSpace;
         private bool _skinnedMeshRenderersOnly;
         private Dictionary<Slot, Slot> _slotsMap = new Dictionary<Slot, Slot>();
         private Slot _statueMaterials;
@@ -989,7 +1034,7 @@ namespace Restonite
 
         private void ChangeMaterialReferences(IAssetProvider<Material> material, IAssetProvider<Material> newMaterial)
         {
-            foreach (var map in MeshRenderers.SelectMany(x => x.Materials))
+            foreach (var map in MeshRenderers.SelectMany(x => x.MaterialSets).SelectMany(x => x))
             {
                 // Update material references for normal
                 if (map.Normal == material)

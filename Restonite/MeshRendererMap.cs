@@ -11,6 +11,8 @@ namespace Restonite
     {
         public MeshRenderer NormalMeshRenderer {  get; set; }
         public MeshRenderer StatueMeshRenderer { get; set; }
-        public List<MaterialMap> Materials { get; set; } = new List<MaterialMap>();
+        public MaterialSet NormalMaterialSet { get; set; }
+        public MaterialSet StatueMaterialSet { get; set; }
+        public List<List<MaterialMap>> MaterialSets { get; set; } = new List<List<MaterialMap>>();
     }
 }

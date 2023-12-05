@@ -90,11 +90,13 @@ namespace Restonite
 
             public bool InstallSystemOnAvatar(Slot scratchSpace, SyncRef<Slot> statueSystemFallback)
             {
-                Log.Info("Starting install for avatar " + _avatar.AvatarRoot.Name);
+                Log.Info($"=== Starting install for avatar {_avatar.AvatarRoot.ToShortString()}");
 
                 // Start
                 if(!_avatar.VerifyInstallRequirements())
                     return false;
+
+                _avatar.SetScratchSpace(scratchSpace);
 
                 _avatar.CreateOrUpdateSlots();
                 _avatar.SetupRootDynVar();
@@ -114,9 +116,9 @@ namespace Restonite
                 // 2. For each old material, give it an appropriate blend mode
 
                 // Create a map of normal materials -> statue materials
-                Log.Info("Creating material drivers");
-                _avatar.GenerateStatueMaterials();
+                _avatar.CollectMaterials();
                 _avatar.GenerateNormalMaterials();
+                _avatar.GenerateStatueMaterials();
 
                 // Set up drivers
                 _avatar.CopyBlendshapes();
@@ -144,13 +146,13 @@ namespace Restonite
                 return slot.Children.First();
             }
 
-            public Slot GetStatueSystem(Slot x, CloudValueVariable<string> uriVariable, SyncRef<Slot> fallback)
+            public Slot GetStatueSystem(Slot scratchSpace, CloudValueVariable<string> uriVariable, SyncRef<Slot> fallback)
             {
                 if (fallback.Value != RefID.Null)
                 {
                     Log.Info("Using statue system override from RefID " + fallback.Value);
 
-                    return fallback.Target.Duplicate(x);
+                    return fallback.Target.Duplicate(scratchSpace);
                 }
                 else
                 {
@@ -159,29 +161,29 @@ namespace Restonite
                     var fileName = uriVariable.Value.Value;
                     var fileUri = new Uri(fileName);
 
-                    var record = x.Engine.RecordManager.FetchRecord(fileUri).GetAwaiter().GetResult();
+                    var record = scratchSpace.Engine.RecordManager.FetchRecord(fileUri).GetAwaiter().GetResult();
 
-                    Log.Debug("Got Record " + record.ToString());
-                    Log.Debug("Fetching from " + record.Entity.AssetURI);
+                    Log.Debug($"Got record for {record.Entity.Name}");
+                    Log.Debug($"Fetching from {record.Entity.AssetURI}");
 
-                    string fileData = x.Engine.AssetManager.GatherAssetFile(new Uri(record.Entity.AssetURI), 100.0f).GetAwaiter().GetResult();
+                    string fileData = scratchSpace.Engine.AssetManager.GatherAssetFile(new Uri(record.Entity.AssetURI), 100.0f).GetAwaiter().GetResult();
 
                     Msg(fileUri);
                     Msg(fileData);
 
                     if (fileData != null)
                     {
-                        x.LocalUser.GetPointInFrontOfUser(out var point, out var rotation, float3.Backward);
+                        scratchSpace.LocalUser.GetPointInFrontOfUser(out var point, out var rotation, float3.Backward);
 
                         Log.Info("Got file successfully");
 
-                        return SpawnSlot(x, fileData, x.World, point, new float3(1.0f, 1.0f, 1.0f));
+                        return SpawnSlot(scratchSpace, fileData, scratchSpace.World, point, new float3(1.0f, 1.0f, 1.0f));
                     }
                     else
                     {
                         Log.Error("ERROR: File was null after RequestGather");
 
-                        return x.AddSlot("File was null after RequestGather");
+                        return scratchSpace.AddSlot("File was null after RequestGather");
                     }
                 }
             }

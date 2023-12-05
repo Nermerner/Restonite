@@ -306,12 +306,24 @@ namespace Restonite
                 var UI = new UIBuilder(_listPanel);
                 RadiantUI_Constants.SetupEditorStyle(UI);
 
-                foreach (var meshRendererMap in _avatar.MeshRenderers)
+                var first = true;
+                for (int i = 0; i < _avatar.MeshRenderers.Count; i++)
                 {
+                    MeshRendererMap meshRendererMap = _avatar.MeshRenderers[i];
                     if (meshRendererMap.NormalMeshRenderer == null)
                         continue;
 
                     UI.Spacer(32f);
+                    if (!first)
+                    {
+                        UI.Nest();
+                        var separator = UI.Image(new colorX(0.5f));
+                        separator.FillRect.Value = new Rect(0.1f, 0, 0.8f, 1);
+                        UI.CurrentRect.OffsetMin.Value = new float2(0, 15);
+                        UI.CurrentRect.OffsetMax.Value = new float2(0, -15);
+                        UI.NestOut();
+                    }
+                    first = false;
 
                     UI.PushStyle();
                     UI.Style.MinHeight = 24f;
@@ -353,110 +365,125 @@ namespace Restonite
 
                     UI.NestOut();
 
-                    UI.PushStyle();
-                    UI.Style.MinHeight = 24f;
-                    UI.Next("Materials Header");
-                    UI.Nest();
-                    UI.PopStyle();
-
-                    var headerCols = UI.SplitHorizontally(0.03f, 0.35f, 0.35f, 0.20f, 0.07f);
-
-                    UI.NestInto(headerCols[1]);
-                    headerCols[1].OffsetMax.Value = new float2(-10, 0);
-                    var text = UI.Text("Normal material");
-                    text.Size.Value = 20;
-                    text.HorizontalAlign.Value = TextHorizontalAlignment.Left;
-                    UI.NestOut();
-
-                    UI.NestInto(headerCols[2]);
-                    headerCols[2].OffsetMin.Value = new float2(10, 0);
-                    headerCols[2].OffsetMax.Value = new float2(-10, 0);
-                    text = UI.Text("Statue material");
-                    text.Size.Value = 20;
-                    text.HorizontalAlign.Value = TextHorizontalAlignment.Left;
-                    UI.NestOut();
-
-                    UI.NestInto(headerCols[3]);
-                    headerCols[3].OffsetMin.Value = new float2(10, 0);
-                    headerCols[3].OffsetMax.Value = new float2(-10, 0);
-                    text = UI.Text("Transition type");
-                    text.Size.Value = 20;
-                    text.HorizontalAlign.Value = TextHorizontalAlignment.Left;
-                    UI.NestOut();
-
-                    UI.NestInto(headerCols[4]);
-                    headerCols[3].OffsetMin.Value = new float2(10, 0);
-                    text = UI.Text("Use as-is");
-                    text.Size.Value = 20;
-                    text.HorizontalAlign.Value = TextHorizontalAlignment.Left;
-                    UI.NestOut();
-
-                    UI.NestOut();
-
-                    var index = 0;
-                    foreach (var materialMap in meshRendererMap.Materials)
+                    for (int set = 0; set < meshRendererMap.MaterialSets.Count; set++)
                     {
+                        if (meshRendererMap.MaterialSets.Count > 1)
+                        {
+                            UI.PushStyle();
+                            UI.Style.MinHeight = 24f;
+                            UI.Next($"Material Set {set}");
+                            UI.Nest();
+                            var materialSetTitle = UI.Text($"Material Set {set}");
+                            materialSetTitle.Size.Value = 20;
+                            materialSetTitle.HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                            UI.NestOut();
+                            UI.PopStyle();
+                        }
+
                         UI.PushStyle();
                         UI.Style.MinHeight = 24f;
-                        UI.Next($"Material slot {index}: {materialMap.Normal.ReferenceID}");
+                        UI.Next("Materials Header");
                         UI.Nest();
                         UI.PopStyle();
 
-                        var materialCols = UI.SplitHorizontally(0.03f, 0.35f, 0.35f, 0.20f, 0.07f);
+                        var headerCols = UI.SplitHorizontally(0.03f, 0.35f, 0.35f, 0.20f, 0.07f);
 
-                        UI.NestInto(materialCols[0]);
-                        var indexLabel = UI.Text($"{index}:");
-                        indexLabel.Size.Value = 20;
-                        indexLabel.HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                        UI.NestInto(headerCols[1]);
+                        headerCols[1].OffsetMax.Value = new float2(-10, 0);
+                        var text = UI.Text("Normal material");
+                        text.Size.Value = 20;
+                        text.HorizontalAlign.Value = TextHorizontalAlignment.Left;
                         UI.NestOut();
 
-                        UI.NestInto(materialCols[1]);
-                        UI.Next("Normal material");
-                        UI.CurrentRect.OffsetMax.Value = new float2(-10, 0);
-                        var normalMaterial = UI.Current.AttachComponent<ReferenceField<IAssetProvider<Material>>>();
-                        normalMaterial.Reference.Value = materialMap.Normal.ReferenceID;
-                        UI.Current.AttachComponent<RefEditor>().Setup(normalMaterial.Reference);
-                        normalMaterial.Reference.OnValueChange += _ => normalMaterial.Reference.Value = materialMap.Normal.ReferenceID;
-
-                        slot = UI.Current.Children.First();     // Get the Horizontal Layout slot
-                        slot.Children.Last().Destroy();         // Destroy the clear button for the RefEditor
-
+                        UI.NestInto(headerCols[2]);
+                        headerCols[2].OffsetMin.Value = new float2(10, 0);
+                        headerCols[2].OffsetMax.Value = new float2(-10, 0);
+                        text = UI.Text("Statue material");
+                        text.Size.Value = 20;
+                        text.HorizontalAlign.Value = TextHorizontalAlignment.Left;
                         UI.NestOut();
 
-                        UI.NestInto(materialCols[2]);
-                        UI.Next("Statue material");
-                        UI.CurrentRect.OffsetMin.Value = new float2(10, 0);
-                        UI.CurrentRect.OffsetMax.Value = new float2(-10, 0);
-                        var statueMaterial = UI.Current.AttachComponent<ReferenceField<IAssetProvider<Material>>>();
-                        statueMaterial.Reference.Value = materialMap.Statue.ReferenceID;
-                        UI.Current.AttachComponent<RefEditor>().Setup(statueMaterial.Reference);
-                        statueMaterial.Reference.OnValueChange += _ => materialMap.Statue = statueMaterial.Reference.Target;
+                        UI.NestInto(headerCols[3]);
+                        headerCols[3].OffsetMin.Value = new float2(10, 0);
+                        headerCols[3].OffsetMax.Value = new float2(-10, 0);
+                        text = UI.Text("Transition type");
+                        text.Size.Value = 20;
+                        text.HorizontalAlign.Value = TextHorizontalAlignment.Left;
                         UI.NestOut();
 
-                        UI.NestInto(materialCols[3]);
-                        UI.Next("Transition type");
-                        UI.CurrentRect.OffsetMin.Value = new float2(10, 0);
-                        UI.CurrentRect.OffsetMax.Value = new float2(-10, 0);
-                        var transitionType = UI.Current.AttachComponent<ValueField<int>>();
-                        transitionType.Value.Value = (int)materialMap.TransitionType;
-                        var editor = new StatueTypeEditor();
-                        editor.Setup(UI.Current, transitionType.Value);
-                        transitionType.Value.OnValueChange += _ => materialMap.TransitionType = (StatueType)transitionType.Value.Value;
-                        UI.NestOut();
-
-                        UI.NestInto(materialCols[4]);
-                        UI.Next("Use as-is");
-                        UI.CurrentRect.OffsetMin.Value = new float2(10, 0);
-                        UI.Nest();
-                        var asIs = UI.Checkbox();
-                        asIs.State.Value = materialMap.UseAsIs;
-                        asIs.State.OnValueChange += _ => materialMap.UseAsIs = asIs.State;
-                        UI.NestOut();
+                        UI.NestInto(headerCols[4]);
+                        headerCols[3].OffsetMin.Value = new float2(10, 0);
+                        text = UI.Text("Use as-is");
+                        text.Size.Value = 20;
+                        text.HorizontalAlign.Value = TextHorizontalAlignment.Left;
                         UI.NestOut();
 
                         UI.NestOut();
 
-                        index++;
+                        for (int materialSlot = 0; materialSlot < meshRendererMap.MaterialSets[set].Count; materialSlot++)
+                        {
+                            MaterialMap materialMap = meshRendererMap.MaterialSets[set][materialSlot];
+
+                            UI.PushStyle();
+                            UI.Style.MinHeight = 24f;
+                            UI.Next($"Material slot {materialSlot}: {materialMap.Normal.ReferenceID}");
+                            UI.Nest();
+                            UI.PopStyle();
+
+                            var materialCols = UI.SplitHorizontally(0.03f, 0.35f, 0.35f, 0.20f, 0.07f);
+
+                            UI.NestInto(materialCols[0]);
+                            var indexLabel = UI.Text($"{materialSlot}:");
+                            indexLabel.Size.Value = 20;
+                            indexLabel.HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                            UI.NestOut();
+
+                            UI.NestInto(materialCols[1]);
+                            UI.Next("Normal material");
+                            UI.CurrentRect.OffsetMax.Value = new float2(-10, 0);
+                            var normalMaterial = UI.Current.AttachComponent<ReferenceField<IAssetProvider<Material>>>();
+                            normalMaterial.Reference.Value = materialMap.Normal.ReferenceID;
+                            UI.Current.AttachComponent<RefEditor>().Setup(normalMaterial.Reference);
+                            normalMaterial.Reference.OnValueChange += _ => normalMaterial.Reference.Value = materialMap.Normal.ReferenceID;
+
+                            slot = UI.Current.Children.First();     // Get the Horizontal Layout slot
+                            slot.Children.Last().Destroy();         // Destroy the clear button for the RefEditor
+
+                            UI.NestOut();
+
+                            UI.NestInto(materialCols[2]);
+                            UI.Next("Statue material");
+                            UI.CurrentRect.OffsetMin.Value = new float2(10, 0);
+                            UI.CurrentRect.OffsetMax.Value = new float2(-10, 0);
+                            var statueMaterial = UI.Current.AttachComponent<ReferenceField<IAssetProvider<Material>>>();
+                            statueMaterial.Reference.Value = materialMap.Statue.ReferenceID;
+                            UI.Current.AttachComponent<RefEditor>().Setup(statueMaterial.Reference);
+                            statueMaterial.Reference.OnValueChange += _ => materialMap.Statue = statueMaterial.Reference.Target;
+                            UI.NestOut();
+
+                            UI.NestInto(materialCols[3]);
+                            UI.Next("Transition type");
+                            UI.CurrentRect.OffsetMin.Value = new float2(10, 0);
+                            UI.CurrentRect.OffsetMax.Value = new float2(-10, 0);
+                            var transitionType = UI.Current.AttachComponent<ValueField<int>>();
+                            transitionType.Value.Value = (int)materialMap.TransitionType;
+                            var editor = new StatueTypeEditor();
+                            editor.Setup(UI.Current, transitionType.Value);
+                            transitionType.Value.OnValueChange += _ => materialMap.TransitionType = (StatueType)transitionType.Value.Value;
+                            UI.NestOut();
+
+                            UI.NestInto(materialCols[4]);
+                            UI.Next("Use as-is");
+                            UI.CurrentRect.OffsetMin.Value = new float2(10, 0);
+                            UI.Nest();
+                            var asIs = UI.Checkbox();
+                            asIs.State.Value = materialMap.UseAsIs;
+                            asIs.State.OnValueChange += _ => materialMap.UseAsIs = asIs.State;
+                            UI.NestOut();
+                            UI.NestOut();
+
+                            UI.NestOut();
+                        }
                     }
                 }
 
