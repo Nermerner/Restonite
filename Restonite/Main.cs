@@ -36,10 +36,6 @@ namespace Restonite
         {
             //// do whatever LibHarmony patching you need
 
-            //Debug("a debug log");
-            //Msg("a regular log");
-            //Warn("a warn log");
-            //Error("an error log");
             Engine.Current.RunPostInit(AddMenuOption);
 
             Harmony harmony = new Harmony("com.nermerner.StatueUtilities");
