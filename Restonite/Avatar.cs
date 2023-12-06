@@ -1,4 +1,4 @@
-﻿using Elements.Core;
+using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -35,7 +35,7 @@ namespace Restonite
                 if (material.Normal != null && material.Normal.Slot != normalMaterials)
                 {
                     Log.Debug($"Copying {material.Normal.ToLongString()} to {normalMaterials.ToShortString()}");
-                    var newMaterial = (AssetProvider<Material>)normalMaterials.CopyComponent((AssetProvider<Material>)material.Normal);
+                    var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Normal, normalMaterials);
 
                     ChangeMaterialReferences(material.Normal, newMaterial);
                 }
@@ -43,7 +43,7 @@ namespace Restonite
                 if (material.Statue != null && material.Statue.Slot != statueMaterials)
                 {
                     Log.Debug($"Copying {material.Statue.ToLongString()} to {statueMaterials.ToShortString()}");
-                    var newMaterial = (AssetProvider<Material>)statueMaterials.CopyComponent((AssetProvider<Material>)material.Statue);
+                    var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Statue, statueMaterials);
 
                     ChangeMaterialReferences(material.Statue, newMaterial);
                 }
@@ -973,7 +973,7 @@ namespace Restonite
                         {
                             // Check for incompatible transition types for materials
                             if ((material.TransitionType == StatueType.PlaneSlicer || material.TransitionType == StatueType.RadialSlicer)
-                                && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular))
+                                && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular) && !(material.Normal is PBS_DistanceLerpMaterial))
                             {
                                 Log.Error($"{material.GetType().Name} does not support {material.TransitionType}, aborting");
                                 return false;
@@ -981,7 +981,7 @@ namespace Restonite
                             else if ((material.TransitionType == StatueType.AlphaFade || material.TransitionType == StatueType.AlphaCutout)
                                 && !(material.Normal is PBS_DualSidedMetallic) && !(material.Normal is PBS_DualSidedSpecular)
                                 && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular)
-                                && !(material.Normal is XiexeToonMaterial))
+                                && !(material.Normal is XiexeToonMaterial) && !(material.Normal is PBS_DistanceLerpMaterial))
                             {
                                 Log.Error($"{material.GetType().Name} does not support {material.TransitionType}, aborting");
                                 return false;

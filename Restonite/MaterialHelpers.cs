@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 
 namespace Restonite
 {
-    internal class MaterialHelpers
+    internal static class MaterialHelpers
     {
-        static public IAssetProvider<Material> CreateStatueMaterial(IAssetProvider<Material> originalMaterial, IAssetProvider<Material> statueMaterial, Slot destination)
+        public static IAssetProvider<Material> CreateStatueMaterial(IAssetProvider<Material> originalMaterial, IAssetProvider<Material> statueMaterial, Slot destination)
         {
             var newMaterial = destination.CopyComponent((AssetProvider<Material>)statueMaterial);
 
@@ -349,7 +349,40 @@ namespace Restonite
         #endregion RadialDisplace
         #endregion MaterialSetup
 
-        static public IAssetProvider<Material> CreateAlphaMaterial(IAssetProvider<Material> originalMaterial, StatueType statueType, Slot destination)
+        public static IAssetProvider<Material> CopyMaterialToSlot(IAssetProvider<Material> originalMaterial, Slot destination)
+        {
+            switch(originalMaterial)
+            {
+                case PBS_DistanceLerpMetallic dlm:
+                    {
+                        var newMaterial = destination.AttachComponent<PBS_Metallic>();
+                        FrooxEngine.MaterialHelper.CopyMaterialProperties(dlm, newMaterial);
+                        return newMaterial;
+                    }
+                case PBS_DistanceLerpSpecular dls:
+                    {
+                        var newMaterial = destination.AttachComponent<PBS_Specular>();
+                        FrooxEngine.MaterialHelper.CopyMaterialProperties(dls, newMaterial);
+                        return newMaterial;
+                    }
+                case PBS_SliceMetallic sm:
+                    {
+                        var newMaterial = destination.AttachComponent<PBS_Metallic>();
+                        FrooxEngine.MaterialHelper.CopyMaterialProperties(sm, newMaterial);
+                        return newMaterial;
+                    }
+                case PBS_SliceSpecular ss:
+                    {
+                        var newMaterial = destination.AttachComponent<PBS_Specular>();
+                        FrooxEngine.MaterialHelper.CopyMaterialProperties(ss, newMaterial);
+                        return newMaterial;
+                    }
+                default:
+                    return (IAssetProvider<Material>)destination.CopyComponent((AssetProvider<Material>)originalMaterial);
+            }
+        }
+
+        public static IAssetProvider<Material> CreateAlphaMaterial(IAssetProvider<Material> originalMaterial, StatueType statueType, Slot destination)
         {
             switch (statueType)
             {
