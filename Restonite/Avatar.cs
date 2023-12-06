@@ -1,4 +1,4 @@
-using Elements.Core;
+﻿using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -335,7 +335,7 @@ namespace Restonite
 
             // Find existing slots
             _defaults = StatueRoot.FindChildOrAdd("Defaults");
-            _userCustomization = StatueRoot.GetChildrenWithTag("UpdateOnStatue").FirstOrDefault();
+            _userCustomization = StatueRoot.GetChildrenWithTag("StatueUserConfig").FirstOrDefault();
 
             _drivers = StatueRoot.FindChildOrAdd("Drivers");
             _meshes = _drivers.FindChildOrAdd("Meshes");
@@ -630,33 +630,48 @@ namespace Restonite
 
             var oldDefaults = _defaults.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
 
-            // Update user customization slot
+            // Update user config slot
             if (_userCustomization == null)
             {
-                var updateSlot = systemSlot.GetChildrenWithTag("UpdateOnStatue").FirstOrDefault();
+                var updateSlot = systemSlot.GetChildrenWithTag("StatueUserConfig").FirstOrDefault();
 
                 if (updateSlot != null)
                 {
                     Log.Info($"Adding {updateSlot.ToShortString()} with tag {updateSlot.Tag}");
-                    updateSlot.Duplicate(StatueRoot);
 
-                    var dynVars = updateSlot.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
+                    updateSlot = updateSlot.Duplicate(StatueRoot);
 
-                    // Update existing user customization slots
+                    var dynVars = updateSlot
+                        .GetComponentsInChildren<IDynamicVariable>(filter: x => x.VariableName.StartsWith("Avatar/"))
+                        .ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
+
+                    // Update existing user config slots
                     var updateDynVars = oldDefaults.Join(dynVars,
                         defaults => defaults.DynamicVariable.VariableName,
                         system => system.DynamicVariable.VariableName,
                         (defaults, system) => new { Defaults = defaults, System = system }).ToList();
                     foreach (var dynVar in updateDynVars)
                     {
-                        var propertyA = dynVar.Defaults.DynamicVariable.GetType().GetProperty("Value") ?? dynVar.Defaults.DynamicVariable.GetType().GetProperty("Reference");
-                        var propertyB = dynVar.System.DynamicVariable.GetType().GetProperty("Value") ?? dynVar.System.DynamicVariable.GetType().GetProperty("Reference");
+                        var a = dynVar.Defaults.DynamicVariable as dynamic;
+                        var b = dynVar.System.DynamicVariable as dynamic;
+                        var typeA = dynVar.Defaults.DynamicVariable.GetType();
+                        var typeB = dynVar.System.DynamicVariable.GetType();
 
-                        if (propertyA.PropertyType == propertyB.PropertyType)
+                        if (typeA.GetGenericTypeDefinition() == typeof(DynamicValueVariable<>) && typeB.GetGenericTypeDefinition() == typeof(DynamicValueVariable<>) && typeA.GenericTypeArguments[0] == typeB.GenericTypeArguments[0])
                         {
-                            Log.Info($"Migrating user customization slot for {dynVar.Defaults.DynamicVariable.VariableName}");
-                            propertyA.SetValue(dynVar.Defaults.DynamicVariable, propertyB.GetValue(dynVar.System.DynamicVariable));
+                            Log.Info($"Migrating user config slot for {dynVar.Defaults.DynamicVariable.VariableName}");
+                            b.Value.Value = a.Value.Value;
                             dynVar.Defaults.Slot.Name = dynVar.System.Slot.Name;
+                        }
+                        else if (typeA.GetGenericTypeDefinition() == typeof(DynamicReferenceVariable<>) && typeB.GetGenericTypeDefinition() == typeof(DynamicReferenceVariable<>) && typeA.GenericTypeArguments[0] == typeB.GenericTypeArguments[0])
+                        {
+                            Log.Info($"Migrating user config slot for {dynVar.Defaults.DynamicVariable.VariableName}");
+                            b.Reference.Value = a.Reference.Value;
+                            dynVar.Defaults.Slot.Name = dynVar.System.Slot.Name;
+                        }
+                        else
+                        {
+                            Log.Warn($"User config slot for {dynVar.Defaults.DynamicVariable.VariableName} have differing data types, skipping");
                         }
                     }
 
@@ -666,52 +681,57 @@ namespace Restonite
             }
             else
             {
-                var existingDynVars = _userCustomization.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
+                var existingDynVars = _userCustomization
+                    .GetComponentsInChildren<IDynamicVariable>(filter: x => x.VariableName.StartsWith("Avatar/"))
+                    .ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
+
                 existingDynVars.AddRange(oldDefaults);
 
-                var updateSlot = systemSlot.GetChildrenWithTag("UpdateOnStatue").FirstOrDefault();
+                var updateSlot = systemSlot.GetChildrenWithTag("StatueUserConfig").FirstOrDefault();
 
                 if (updateSlot != null)
                 {
                     Log.Info($"Updating {updateSlot.ToShortString()} with tag {updateSlot.Tag}");
-                    var dynVars = updateSlot.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
 
-                    // Clean up old user customization slots no longer present in the system
+                    var dynVars = updateSlot
+                        .GetComponentsInChildren<IDynamicVariable>(filter: x => x.VariableName.StartsWith("Avatar/"))
+                        .ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
+
+                    // Clean up old user config slots no longer present in the system
                     var oldDynVars = existingDynVars.Where(x => !dynVars.Exists(y => y.DynamicVariable.VariableName == x.DynamicVariable.VariableName)).ToList();
                     foreach (var dynVar in oldDynVars)
                     {
-                        Log.Info($"Removing old user customization slot for {dynVar.DynamicVariable.VariableName}");
+                        Log.Info($"Removing old user config slot for {dynVar.DynamicVariable.VariableName}");
                         dynVar.Slot.Destroy();
                         existingDynVars.Remove(dynVar);
                     }
 
-                    // Add new user customization slots present in the system
+                    // Add new user config slots present in the system
                     var newDynVars = dynVars.Where(x => !existingDynVars.Exists(y => y.DynamicVariable.VariableName == x.DynamicVariable.VariableName)).ToList();
                     foreach (var dynVar in newDynVars)
                     {
-                        Log.Info($"Adding new user customization slot for {dynVar.DynamicVariable.VariableName}");
+                        Log.Info($"Adding new user config slot for {dynVar.DynamicVariable.VariableName}");
                         dynVar.Slot.Duplicate(_userCustomization);
                     }
 
-                    // Update existing user customization slots
+                    // Update existing user config slots
                     var updateDynVars = existingDynVars.Join(dynVars,
                         existing => existing.DynamicVariable.VariableName,
                         system => system.DynamicVariable.VariableName,
                         (existing, system) => new { Existing = existing, System = system }).ToList();
                     foreach (var dynVar in updateDynVars)
                     {
-                        var propertyA = dynVar.Existing.DynamicVariable.GetType().GetProperty("Value") ?? dynVar.Existing.DynamicVariable.GetType().GetProperty("Reference");
-                        var propertyB = dynVar.System.DynamicVariable.GetType().GetProperty("Value") ?? dynVar.System.DynamicVariable.GetType().GetProperty("Reference");
+                        var typeA = dynVar.Existing.DynamicVariable.GetType();
+                        var typeB = dynVar.System.DynamicVariable.GetType();
 
-                        if (propertyA.PropertyType == propertyB.PropertyType)
+                        if (typeA == typeB)
                         {
-                            Log.Info($"Updating user customization slot for {dynVar.Existing.DynamicVariable.VariableName}");
-                            propertyA.SetValue(dynVar.Existing.DynamicVariable, propertyB.GetValue(dynVar.System.DynamicVariable));
+                            Log.Info($"Updating user config slot for {dynVar.Existing.DynamicVariable.VariableName}");
                             dynVar.Existing.Slot.Name = dynVar.System.Slot.Name;
                         }
                         else
                         {
-                            Log.Warn($"User customization slot for {dynVar.Existing.DynamicVariable.VariableName} have differing data types, overwriting");
+                            Log.Warn($"User config slot for {dynVar.Existing.DynamicVariable.VariableName} have differing data types, overwriting");
                             dynVar.Existing.Slot.Destroy();
                             dynVar.System.Slot.Duplicate(_userCustomization);
                         }
