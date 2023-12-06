@@ -487,19 +487,20 @@ namespace Restonite
 
                             oldMaterialToNewNormalMaterialMap[key] = newMaterial;
                         }
-                        else
-                        {
-                            Log.Info($"Material on {name} was already created");
-                        }
-
-                        var materialSlot = map.NormalMeshRenderer.Materials.GetElement(slot);
 
                         if (map.NormalMaterialSet != null)
+                        {
                             map.NormalMaterialSet.Sets[set][slot] = oldMaterialToNewNormalMaterialMap[key];
-                        else if (!materialSlot.IsDriven && !materialSlot.IsLinked)
-                            map.NormalMeshRenderer.Materials[slot] = oldMaterialToNewNormalMaterialMap[key];
+                        }
                         else
-                            Log.Warn($"{name} is already driven");
+                        {
+                            var materialSlot = map.NormalMeshRenderer.Materials.GetElement(slot);
+                            var element = materialSlot.ActiveLink as SyncElement;
+                            if (materialSlot.IsDriven && materialSlot.IsLinked)
+                                Log.Warn($"{name} appears to already be driven by {element.Component.ToLongString()}");
+
+                            map.NormalMeshRenderer.Materials[slot] = oldMaterialToNewNormalMaterialMap[key];
+                        }
                     }
                 }
             }
@@ -587,22 +588,24 @@ namespace Restonite
 
                             oldMaterialToStatueMaterialMap.Add(key, multiDriver);
                         }
-                        else
-                        {
-                            Log.Info($"Material on {name} was already created");
-                        }
 
                         if (map.StatueMeshRenderer != null && slot < map.StatueMeshRenderer.Materials.Count)
                         {
-                            var materialSlot = map.StatueMeshRenderer.Materials.GetElement(slot);
                             var drives = oldMaterialToStatueMaterialMap[key].Drives;
 
                             if (map.StatueMaterialSet != null)
+                            {
                                 drives.Add().ForceLink(map.StatueMaterialSet.Sets[set].GetElement(slot));
-                            else if (!materialSlot.IsDriven && !materialSlot.IsLinked)
-                                drives.Add().ForceLink(materialSlot);
+                            }
                             else
-                                Log.Warn($"{name} is already driven");
+                            {
+                                var materialSlot = map.StatueMeshRenderer.Materials.GetElement(slot);
+                                var element = materialSlot.ActiveLink as SyncElement;
+                                if (materialSlot.IsDriven && materialSlot.IsLinked)
+                                    Log.Warn($"{name} appears to already be driven by {element.Component.ToLongString()}");
+
+                                drives.Add().ForceLink(materialSlot);
+                            }
                         }
 
                         // Thanks Dann :)
