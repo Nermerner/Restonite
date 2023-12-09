@@ -185,7 +185,7 @@ namespace Restonite
                 UI.Current.Children.Last().Destroy();   // Remove the Add button
                 _foundMeshRenderers.References.ElementsRemoving += (list, startIndex, count) =>
                 {
-                    if (count == 1)
+                    if (count == 1 && !_refreshingList)
                         _avatar.RemoveMeshRenderer(list[startIndex].Value);
                 };
                 UI.NestOut();
@@ -254,6 +254,7 @@ namespace Restonite
         private readonly ReferenceField<Slot> _statueSystemFallback;
         private readonly ValueField<int> _statueType;
         private readonly Slot _wizardSlot;
+        private bool _refreshingList;
 
         #endregion
 
@@ -298,8 +299,10 @@ namespace Restonite
         {
             try
             {
+                _refreshingList = true;
                 _foundMeshRenderers.References.Clear();
                 _foundMeshRenderers.References.AddRange(_avatar.MeshRenderers.Where(x => x.NormalMeshRenderer != null).Select(x => x.NormalMeshRenderer));
+                _refreshingList = false;
 
                 _listPanel.DestroyChildren();
 
