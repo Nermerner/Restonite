@@ -102,6 +102,7 @@ namespace Restonite
                 if(systemSlot == null)
                     return false;
 
+                _avatar.RemoveLegacySystem();
                 _avatar.InstallRemasterSystem(systemSlot);
 
                 if (!_avatar.DuplicateMeshes())

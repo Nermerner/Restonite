@@ -1,4 +1,4 @@
-using Elements.Core;
+﻿using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -136,16 +136,14 @@ namespace Restonite
 
             void AddFieldToMultidriver<T>(ValueMultiDriver<T> driver, IField<T> field) => driver.Drives.Add().ForceLink(field);
 
-            var disableOnFreezeDriverSlot = _drivers.FindChildOrAdd("Avatar/Statue.DisableOnFreeze");
-
             // Check for existing configuration and save the fields being driven
+            var disableOnFreezeDriverSlot = _drivers.FindChildOrAdd("Avatar/Statue.DisableOnFreeze");
             var existingMultiDriver = disableOnFreezeDriverSlot.GetComponent<ValueMultiDriver<bool>>();
-            var existingDrives = new List<IField<bool>>();
             if (existingMultiDriver != null)
             {
                 foreach (var drive in existingMultiDriver.Drives)
                 {
-                    existingDrives.Add(drive.Target);
+                    _existingDrivesForDisableOnFreeze.Add(drive.Target);
                 }
             }
 
@@ -229,7 +227,7 @@ namespace Restonite
             }
 
             // Add any custom drives from the previous setup to the multidriver
-            var customDrives = existingDrives.Except(dofDriver.Drives.Select(x => x.Target));
+            var customDrives = _existingDrivesForDisableOnFreeze.Except(dofDriver.Drives.Select(x => x.Target)).Distinct();
             foreach (var customDrive in customDrives)
             {
                 AddFieldToMultidriver(dofDriver, customDrive);
@@ -712,6 +710,7 @@ namespace Restonite
             HasExistingSystem = false;
             HasLegacySystem = false;
             _skinnedMeshRenderersOnly = skinnedMeshRenderersOnly;
+            _existingDrivesForDisableOnFreeze.Clear();
 
             if (AvatarRoot == null)
                 return;
@@ -724,14 +723,14 @@ namespace Restonite
             _generatedMaterials = FindSlot(children, slot => slot.FindChild("Statue Materials") != null && slot.FindChild("Normal Materials") != null, "Generated Materials");
             _drivers = FindSlot(children, slot => slot.FindChild("Avatar/Statue.BodyNormal") != null, "Drivers");
 
-            var legacySystem = AvatarRoot.FindChildInHierarchy("<color=#dadada>Statuefication</color>");
-            var legacyAddons = AvatarRoot.FindChildInHierarchy("<color=#dadada>Statue Add-Ons</color>");
+            _legacySystem = AvatarRoot.FindChildInHierarchy("<color=#dadada>Statuefication</color>");
+            _legacyAddons = AvatarRoot.FindChildInHierarchy("<color=#dadada>Statue Add-Ons</color>");
 
             Log.Debug($"Statue root is {StatueRoot.ToShortString()}");
             Log.Debug($"Generated materials is {_generatedMaterials.ToShortString()}");
             Log.Debug($"Drivers is {_drivers.ToShortString()}");
-            Log.Debug($"Legacy system is {legacySystem.ToShortString()}");
-            Log.Debug($"Legacy addons is {legacyAddons.ToShortString()}");
+            Log.Debug($"Legacy system is {_legacySystem.ToShortString()}");
+            Log.Debug($"Legacy addons is {_legacyAddons.ToShortString()}");
 
             if (StatueRoot != null || (_drivers != null && _generatedMaterials != null))
             {
@@ -739,7 +738,7 @@ namespace Restonite
                 Log.Info("Avatar has existing Remaster system");
             }
 
-            if (legacySystem != null || legacyAddons != null)
+            if (_legacySystem != null || _legacyAddons != null)
             {
                 HasLegacySystem = true;
                 Log.Info("Avatar has legacy system installed");
@@ -811,6 +810,59 @@ namespace Restonite
                         }
                     }
                 }
+            }
+        }
+
+        public void RemoveLegacySystem()
+        {
+            if (_legacySystem != null)
+            {
+                Log.Info("=== Removing legacy system");
+
+                var legacyDisableOnStatueSlot = _legacySystem.FindChild("Disable on Statue", false, false, -1);
+                if (legacyDisableOnStatueSlot != null)
+                {
+                    var existingMultiDriver = legacyDisableOnStatueSlot.GetComponent<ValueMultiDriver<bool>>();
+                    if (existingMultiDriver != null)
+                    {
+                        foreach (var drive in existingMultiDriver.Drives)
+                        {
+                            var worker = drive.Target.FindNearestParent<Worker>();
+                            if (worker is DynamicBoneChain dbc)
+                            {
+                                Log.Debug($"Moving drive for {dbc.ToShortString()} to slot {dbc.Slot.ToShortString()}");
+                                _existingDrivesForDisableOnFreeze.Add(dbc.Slot.ActiveSelf_Field);
+                            }
+                            else if (worker is EyeManager em)
+                            {
+                                Log.Debug($"Moving drive for {em.ToShortString()} to slot {em.Slot.ToShortString()}");
+                                _existingDrivesForDisableOnFreeze.Add(em.Slot.ActiveSelf_Field);
+                            }
+                            else
+                            {
+                                _existingDrivesForDisableOnFreeze.Add(drive.Target);
+                            }
+                        }
+                    }
+                }
+                Log.Info($"Collected {_existingDrivesForDisableOnFreeze.Count} drivers for Disable on Statue");
+
+                var blinder = AvatarRoot.GetComponent<VRIK>()?.Solver.BoneReferences.head.Slot?.FindChild("Blinder");
+                if (blinder?.ActiveSelf_Field.IsDriven == true)
+                {
+                    Log.Info($"Removing {blinder.ToShortString()}");
+                    blinder.Destroy();
+                }
+
+                var smoothTransforms = AvatarRoot.GetComponentsInChildren<SmoothTransform>(slotFilter: x => x.Name == "Target" && x.Parent.Name.EndsWith("Proxy"));
+                foreach (var component in smoothTransforms)
+                {
+                    Log.Info($"Removing {component.ToLongString()}");
+                    component.Slot.RemoveComponent(component);
+                }
+
+                _legacySystem.Destroy();
+                _legacyAddons.Destroy();
             }
         }
 
@@ -910,7 +962,10 @@ namespace Restonite
         private Slot _blendshapes;
         private Slot _defaults;
         private Slot _drivers;
+        private List<IField<bool>> _existingDrivesForDisableOnFreeze = new List<IField<bool>>();
         private Slot _generatedMaterials;
+        private Slot _legacyAddons;
+        private Slot _legacySystem;
         private Slot _meshes;
         private Slot _normalMaterials;
         private Slot _scratchSpace;
