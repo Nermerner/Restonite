@@ -429,7 +429,7 @@ namespace Restonite
 
                             UI.PushStyle();
                             UI.Style.MinHeight = 24f;
-                            UI.Next($"Material slot {materialSlot}: {materialMap.Normal.ReferenceID}");
+                            UI.Next($"Material slot {materialSlot}: {materialMap.Normal?.ReferenceID ?? RefID.Null}");
                             UI.Nest();
                             UI.PopStyle();
 
@@ -445,9 +445,9 @@ namespace Restonite
                             UI.Next("Normal material");
                             UI.CurrentRect.OffsetMax.Value = new float2(-10, 0);
                             var normalMaterial = UI.Current.AttachComponent<ReferenceField<IAssetProvider<Material>>>();
-                            normalMaterial.Reference.Value = materialMap.Normal.ReferenceID;
+                            normalMaterial.Reference.Value = materialMap.Normal?.ReferenceID ?? RefID.Null;
                             UI.Current.AttachComponent<RefEditor>().Setup(normalMaterial.Reference);
-                            normalMaterial.Reference.OnValueChange += _ => normalMaterial.Reference.Value = materialMap.Normal.ReferenceID;
+                            normalMaterial.Reference.OnValueChange += _ => normalMaterial.Reference.Value = materialMap.Normal?.ReferenceID ?? RefID.Null;
 
                             slot = UI.Current.Children.First();     // Get the Horizontal Layout slot
                             slot.Children.Last().Destroy();         // Destroy the clear button for the RefEditor
@@ -459,7 +459,7 @@ namespace Restonite
                             UI.CurrentRect.OffsetMin.Value = new float2(10, 0);
                             UI.CurrentRect.OffsetMax.Value = new float2(-10, 0);
                             var statueMaterial = UI.Current.AttachComponent<ReferenceField<IAssetProvider<Material>>>();
-                            statueMaterial.Reference.Value = materialMap.Statue.ReferenceID;
+                            statueMaterial.Reference.Value = materialMap.Statue?.ReferenceID ?? RefID.Null;
                             UI.Current.AttachComponent<RefEditor>().Setup(statueMaterial.Reference);
                             statueMaterial.Reference.OnValueChange += _ => materialMap.Statue = statueMaterial.Reference.Target;
                             UI.NestOut();
