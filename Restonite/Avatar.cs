@@ -301,6 +301,10 @@ namespace Restonite
             _generatedMaterials = StatueRoot.FindChildOrAdd("Generated Materials");
             _statueMaterials = _generatedMaterials.FindChildOrAdd("Statue Materials");
             _normalMaterials = _generatedMaterials.FindChildOrAdd("Normal Materials");
+
+            // Clear up tags from adding slots
+            foreach (var slot in StatueRoot.GetChildrenWithTag("StatueSystemSetupSlot").Where(x => x != StatueRoot))
+                slot.Tag = null;
         }
 
         public void CreateOrUpdateVoiceDrivers()
