@@ -160,7 +160,7 @@ namespace Restonite
 
             Log.Info("Driving VRIK");
 
-            AddFieldToMultidriver(dofDriver, AvatarRoot.GetComponent<VRIK>().EnabledField);
+            AvatarRoot.GetComponents<VRIK>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
 
             Log.Info("Searching for bones to drive");
             var boneChainSlots = new Dictionary<RefID, Slot>();
@@ -177,71 +177,32 @@ namespace Restonite
 
             Log.Info($"Added {boneChainSlots.Count} bones");
 
-            AddFieldToMultidriver(dofDriver, AvatarRoot.GetComponentInChildren<VisemeAnalyzer>().EnabledField);
-
-            AvatarRoot.GetComponentsInChildren<AvatarExpressionDriver>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-
-            AvatarRoot.GetComponentsInChildren<DirectVisemeDriver>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
+            // Disable visemes
+            AvatarRoot.GetComponentsInChildren<VisemeAnalyzer>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            AvatarRoot.GetComponentsInChildren<DirectVisemeDriver>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
 
             // Disable animation systems (Wigglers, Panners, etc.)
-            AvatarRoot.GetComponentsInChildren<Wiggler>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            AvatarRoot.GetComponentsInChildren<Panner1D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            AvatarRoot.GetComponentsInChildren<Panner2D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            AvatarRoot.GetComponentsInChildren<Panner3D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            AvatarRoot.GetComponentsInChildren<Panner4D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            AvatarRoot.GetComponentsInChildren<Wobbler1D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            AvatarRoot.GetComponentsInChildren<Wobbler2D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            AvatarRoot.GetComponentsInChildren<Wobbler3D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
-            AvatarRoot.GetComponentsInChildren<Wobbler4D>().ForEach((aed) =>
-            {
-                AddFieldToMultidriver(dofDriver, aed.EnabledField);
-            });
+            AvatarRoot.GetComponentsInChildren<Wiggler>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            AvatarRoot.GetComponentsInChildren<Panner1D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            AvatarRoot.GetComponentsInChildren<Panner2D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            AvatarRoot.GetComponentsInChildren<Panner3D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            AvatarRoot.GetComponentsInChildren<Panner4D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            AvatarRoot.GetComponentsInChildren<Wobbler1D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            AvatarRoot.GetComponentsInChildren<Wobbler2D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            AvatarRoot.GetComponentsInChildren<Wobbler3D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            AvatarRoot.GetComponentsInChildren<Wobbler4D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
 
-            AvatarRoot.GetComponentsInChildren<HandPoser>().ForEach((hp) =>
-            {
-                AddFieldToMultidriver(dofDriver, hp.EnabledField);
-            });
+            // Disable avatar expressions
+            AvatarRoot.GetComponentsInChildren<AvatarExpressionDriver>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            AvatarRoot.GetComponentsInChildren<HandPoser>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            AvatarRoot.GetComponentsInChildren<EyeManager>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.Slot.ActiveSelf_Field));
 
-            AvatarRoot.GetComponentsInChildren<EyeManager>().ForEach((em) =>
+            // Disable toolshelfs
+            AvatarRoot.GetComponentsInChildren<AvatarToolAnchor>().ForEach((component) =>
             {
-                AddFieldToMultidriver(dofDriver, em.Slot.ActiveSelf_Field);
-            });
-
-            AvatarRoot.GetComponentsInChildren<AvatarToolAnchor>().ForEach((ata) =>
-            {
-                if (ata.AnchorPoint.Value == AvatarToolAnchor.Point.Toolshelf)
+                if (component.AnchorPoint.Value == AvatarToolAnchor.Point.Toolshelf)
                 {
-                    AddFieldToMultidriver(dofDriver, ata.Slot.ActiveSelf_Field);
+                    AddFieldToMultidriver(dofDriver, component.Slot.ActiveSelf_Field);
                 }
             });
 
