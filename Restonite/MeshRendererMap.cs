@@ -9,6 +9,8 @@ namespace Restonite
 {
     internal class MeshRendererMap
     {
+        public Slot NormalSlot { get; set; }
+        public Slot StatueSlot { get; set; }
         public MeshRenderer NormalMeshRenderer {  get; set; }
         public MeshRenderer StatueMeshRenderer { get; set; }
         public MaterialSet NormalMaterialSet { get; set; }

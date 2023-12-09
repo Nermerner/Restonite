@@ -1,4 +1,4 @@
-﻿using Elements.Core;
+using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -58,55 +58,51 @@ namespace Restonite
             _meshes.RemoveAllComponents(_ => true);
             _blendshapes.DestroyChildren();
 
-            foreach (var slot in _slotsMap)
+            foreach (var map in MeshRenderers)
             {
-                var normal = slot.Key;
-                var statue = slot.Value;
+                if (map.NormalSlot == null || map.StatueSlot == null)
+                    continue;
+
+                if (!(map.NormalMeshRenderer is SkinnedMeshRenderer normalSmr) || !(map.StatueMeshRenderer is SkinnedMeshRenderer statueSmr))
+                    continue;
 
                 // Remove any DirectVisemeDrivers from statue slots as these will be driven by ValueCopys
-                var visemeDriver = statue.GetComponent<DirectVisemeDriver>();
+                var visemeDriver = map.StatueSlot.GetComponent<DirectVisemeDriver>();
                 if (visemeDriver != null)
                 {
-                    statue.RemoveComponent(visemeDriver);
-                    Log.Info($"Removed DirectVisemeDriver on {statue.ToShortString()}");
+                    map.StatueSlot.RemoveComponent(visemeDriver);
+                    Log.Info($"Removed DirectVisemeDriver on {map.StatueSlot.ToShortString()}");
                 }
 
-                var blendshapeDrivers = _blendshapes.AddSlot(normal.Name);
-
-                // Since statue is duplicated from normal it is assumed there's the same number of SMRs
-                var normalSmrs = normal.GetComponents<SkinnedMeshRenderer>();
-                var statueSmrs = statue.GetComponents<SkinnedMeshRenderer>();
+                var blendshapeDrivers = _blendshapes.AddSlot(map.NormalSlot.Name);
 
                 // Set up link between normal mesh and statue mesh
                 var meshCopy = _meshes.AttachComponent<ValueCopy<bool>>();
-                meshCopy.Source.Value = normal.ActiveSelf_Field.ReferenceID;
-                meshCopy.Target.Value = statue.ActiveSelf_Field.ReferenceID;
+                meshCopy.Source.Value = map.NormalSlot.ActiveSelf_Field.ReferenceID;
+                meshCopy.Target.Value = map.StatueSlot.ActiveSelf_Field.ReferenceID;
 
-                for (var i = 0; i < normalSmrs.Count; i++)
+                var count = 0;
+                for (var j = 0; j < normalSmr.BlendShapeCount; j++)
                 {
-                    var count = 0;
-                    for (var j = 0; j < normalSmrs[i].BlendShapeCount; j++)
+                    // Get the blendshape for the normal and statue mesh for a given index
+                    var normalBlendshapeName = normalSmr.BlendShapeName(j);
+                    var normalBlendshape = normalSmr.GetBlendShape(normalBlendshapeName);
+
+                    var statueBlendshapeName = statueSmr.BlendShapeName(j);
+                    var statueBlendshape = statueSmr.GetBlendShape(statueBlendshapeName);
+
+                    // Only ValueCopy driven blendshapes
+                    if (normalBlendshapeName == statueBlendshapeName && normalBlendshape?.IsDriven == true && statueBlendshape != null)
                     {
-                        // Get the blendshape for the normal and statue mesh for a given index
-                        var normalBlendshapeName = normalSmrs[i].BlendShapeName(j);
-                        var normalBlendshape = normalSmrs[i].GetBlendShape(normalBlendshapeName);
+                        var valueCopy = blendshapeDrivers.AttachComponent<ValueCopy<float>>();
+                        valueCopy.Source.Value = normalBlendshape.ReferenceID;
+                        valueCopy.Target.Value = statueBlendshape.ReferenceID;
 
-                        var statueBlendshapeName = statueSmrs[i].BlendShapeName(j);
-                        var statueBlendshape = statueSmrs[i].GetBlendShape(statueBlendshapeName);
-
-                        // Only ValueCopy driven blendshapes
-                        if (normalBlendshapeName == statueBlendshapeName && normalBlendshape?.IsDriven == true && statueBlendshape != null)
-                        {
-                            var valueCopy = blendshapeDrivers.AttachComponent<ValueCopy<float>>();
-                            valueCopy.Source.Value = normalBlendshape.ReferenceID;
-                            valueCopy.Target.Value = statueBlendshape.ReferenceID;
-
-                            count++;
-                        }
+                        count++;
                     }
-
-                    Log.Info($"Linked {count} blend shapes for {normal.ToShortString()}");
                 }
+
+                Log.Info($"Linked {count} blend shapes for {map.NormalSlot.ToShortString()}");
             }
         }
 
@@ -383,26 +379,27 @@ namespace Restonite
 
             Log.Info("=== Duplicating normal meshes to statue meshes");
 
-            foreach (var x in _slotsMap.ToList())
+            foreach (var map in MeshRenderers)
             {
-                if (x.Value == null)
+                if (map.NormalSlot != null && map.StatueSlot == null)
                 {
-                    var statue = x.Key.Duplicate();
-                    statue.Name = x.Key.Name + "_Statue";
+                    map.StatueSlot = map.NormalSlot.Duplicate();
+                    map.StatueSlot.Name = map.NormalSlot.Name + "_Statue";
 
                     var statueRenderers = (_skinnedMeshRenderersOnly
-                        ? statue.GetComponentsInChildren<SkinnedMeshRenderer>().Cast<MeshRenderer>()
-                        : statue.GetComponentsInChildren<MeshRenderer>()
+                        ? map.StatueSlot.GetComponentsInChildren<SkinnedMeshRenderer>().Cast<MeshRenderer>()
+                        : map.StatueSlot.GetComponentsInChildren<MeshRenderer>()
                         ).ToList();
 
                     foreach (var renderer in statueRenderers)
                     {
-                        var map = MeshRenderers.Find(toSearch => toSearch.NormalMeshRenderer?.Mesh.Value == renderer.Mesh.Value);
-                        if (map != null)
+                        var foundMap = MeshRenderers.Find(toSearch => toSearch.NormalMeshRenderer?.Mesh.Value == renderer.Mesh.Value && toSearch.NormalSlot == map.NormalSlot);
+                        if (foundMap != null)
                         {
-                            map.StatueMeshRenderer = renderer;
+                            foundMap.StatueSlot = map.StatueSlot;
+                            foundMap.StatueMeshRenderer = renderer;
 
-                            Log.Debug($"{map.NormalMeshRenderer.ToLongString()} linked to {map.StatueMeshRenderer.ToLongString()}");
+                            Log.Debug($"{foundMap.NormalMeshRenderer.ToLongString()} linked to {foundMap.StatueMeshRenderer.ToLongString()}");
                         }
                         else
                         {
@@ -411,16 +408,15 @@ namespace Restonite
                         }
                     }
 
-                    _slotsMap[x.Key] = statue;
                     count++;
 
-                    Log.Debug($"Duplicated {x.Key.ToShortString()} to {statue.ToShortString()}");
+                    Log.Debug($"Duplicated {map.NormalSlot.ToShortString()} to {map.StatueSlot.ToShortString()}");
                 }
             }
 
-            foreach(var map in MeshRenderers)
+            foreach (var map in MeshRenderers)
             {
-                if(map.NormalMaterialSet != null && map.StatueMaterialSet == null)
+                if (map.NormalMaterialSet != null && map.StatueMaterialSet == null)
                 {
                     var slot = map.StatueMeshRenderer.Slot;
 
@@ -822,113 +818,33 @@ namespace Restonite
                 : AvatarRoot.GetComponentsInChildren<MeshRenderer>()
                 ).ToList();
 
-            // Find unique slot
-            var uniqueSlots = new Dictionary<RefID, Slot>();
-            foreach (var smr in renderers)
+            var meshes = renderers.Select(x => x.Mesh.Value).Distinct();
+            foreach (var mesh in meshes)
             {
-                if (!uniqueSlots.ContainsKey(smr.Slot.ReferenceID))
+                var renderersForMesh = renderers.Where(x => x.Mesh.Value == mesh).ToList();
+
+                var normal = renderersForMesh.Where(x => !IsStatueMeshRenderer(x)).ToList();
+                var statue = renderersForMesh.Where(x => IsStatueMeshRenderer(x)).ToList();
+
+                if (normal.Count == 1 && statue.Count == 1)
                 {
-                    uniqueSlots.Add(smr.Slot.ReferenceID, smr.Slot);
+                    AddMeshRenderer(normal[0], statue[0], defaultMaterial, transitionType, useDefaultAsIs);
                 }
-            }
-
-            // Map normal slots to statue slots
-            _slotsMap = new Dictionary<Slot, Slot>();
-            foreach (var slot in uniqueSlots)
-            {
-                if (!slot.Value.Name.Contains("Statue"))
+                else
                 {
-                    var existingStatueSlot = uniqueSlots
-                        .Where(x => x.Value.Name.Contains(slot.Value.Name) && x.Value.Name.Contains("Statue"))
-                        .Select(x => x.Value)
-                        .FirstOrDefault();
-
-                    _slotsMap.Add(slot.Value, existingStatueSlot);
-
-                    Log.Debug($"Mapping {slot.Value.ToShortString()} to {existingStatueSlot.ToShortString()}");
-                }
-            }
-
-            Log.Info($"Found {_slotsMap.Count} unique slots");
-
-            foreach (var map in _slotsMap)
-            {
-                var normalRenderers = (skinnedMeshRenderersOnly
-                    ? map.Key.GetComponentsInChildren<SkinnedMeshRenderer>().Cast<MeshRenderer>()
-                    : map.Key.GetComponentsInChildren<MeshRenderer>()
-                    ).ToList();
-                var statueRenderers = (skinnedMeshRenderersOnly
-                    ? map.Value?.GetComponentsInChildren<SkinnedMeshRenderer>().Cast<MeshRenderer>() ?? Enumerable.Empty<MeshRenderer>()
-                    : map.Value?.GetComponentsInChildren<MeshRenderer>() ?? Enumerable.Empty<MeshRenderer>()
-                    ).ToList();
-
-                foreach (var normal in normalRenderers)
-                {
-                    var statue = statueRenderers.Find(x => x.Mesh.Value == normal.Mesh.Value);
-
-                    var rendererMap = new MeshRendererMap
+                    foreach (var normalRenderer in normal)
                     {
-                        NormalMeshRenderer = normal,
-                        StatueMeshRenderer = statue,
-                    };
-
-                    Log.Debug($"Linking {normal.ToLongString()} to {statue.ToLongString()}");
-
-                    if (normal.Materials.IsDriven && normal.Materials.IsLinked)
-                    {
-                        var element = normal.Materials.ActiveLink as SyncElement;
-                        if (element.Component is MaterialSet materialSet)
+                        var statueRenderer = statue.Select(x => (CommonStartSubstring(normalRenderer.Slot.Name, x.Slot.Name), x)).OrderByDescending(x => x.Item1).Take(1).Select(x => x.Item2).FirstOrDefault();
+                        if (statueRenderer != null)
                         {
-                            rendererMap.NormalMaterialSet = materialSet;
-                            Log.Debug($"--> Normal MeshRenderer has {materialSet.ToShortString()} with {materialSet.Sets.Count} sets");
+                            AddMeshRenderer(normalRenderer, statueRenderer, defaultMaterial, transitionType, useDefaultAsIs);
+                            statue.Remove(statueRenderer);
+                        }
+                        else
+                        {
+                            AddMeshRenderer(normalRenderer, null, defaultMaterial, transitionType, useDefaultAsIs);
                         }
                     }
-
-                    if (statue?.Materials.IsDriven == true && statue?.Materials.IsLinked == true)
-                    {
-                        var element = statue.Materials.ActiveLink as SyncElement;
-                        if (element.Component is MaterialSet materialSet)
-                        {
-                            rendererMap.StatueMaterialSet = materialSet;
-                            Log.Debug($"--> Statue MeshRenderer has {materialSet.ToShortString()} with {materialSet.Sets.Count} sets");
-                        }
-                    }
-
-                    if (rendererMap.NormalMaterialSet != null)
-                    {
-                        rendererMap.MaterialSets = rendererMap.NormalMaterialSet.Sets.Select(set => set.Select(material => new MaterialMap
-                        {
-                            Normal = material,
-                            Statue = defaultMaterial,
-                            TransitionType = transitionType,
-                            UseAsIs = useDefaultAsIs,
-                        }).ToList()).ToList();
-                    }
-                    else
-                    {
-                        rendererMap.MaterialSets = new List<List<MaterialMap>>()
-                        {
-                            normal.Materials.Select(x => new MaterialMap
-                            {
-                                Normal = x,
-                                Statue = defaultMaterial,
-                                TransitionType = transitionType,
-                                UseAsIs = useDefaultAsIs,
-                            }).ToList()
-                        };
-                    }
-
-                    for (int set = 0; set < rendererMap.MaterialSets.Count; set++)
-                    {
-                        for (int i = 0; i < rendererMap.MaterialSets[set].Count; i++)
-                        {
-                            MaterialMap material = rendererMap.MaterialSets[set][i];
-                            if (material.Statue != null)
-                                Log.Debug($"--> Material set {set}, slot {i} with {material.Normal.ToShortString()} linked to {material.Statue.ToShortString()}");
-                        }
-                    }
-
-                    MeshRenderers.Add(rendererMap);
                 }
             }
         }
@@ -945,8 +861,6 @@ namespace Restonite
             {
                 Log.Info($"Removing {map.NormalMeshRenderer.ToLongString()} from setup");
                 MeshRenderers.Remove(map);
-                if (!MeshRenderers.Exists(x => x.NormalMeshRenderer?.Slot == map.NormalMeshRenderer.Slot))
-                    _slotsMap.Remove(map.NormalMeshRenderer.Slot);
             }
         }
 
@@ -1036,7 +950,6 @@ namespace Restonite
         private Slot _normalMaterials;
         private Slot _scratchSpace;
         private bool _skinnedMeshRenderersOnly;
-        private Dictionary<Slot, Slot> _slotsMap = new Dictionary<Slot, Slot>();
         private Slot _statueMaterials;
         private Slot _userCustomization;
 
@@ -1055,6 +968,68 @@ namespace Restonite
             return null;
         }
 
+        private void AddMeshRenderer(MeshRenderer normal, MeshRenderer statue, IAssetProvider<Material> defaultMaterial, StatueType transitionType, bool useDefaultAsIs)
+        {
+            var rendererMap = new MeshRendererMap
+            {
+                NormalSlot = normal.Slot,
+                NormalMeshRenderer = normal,
+
+                StatueSlot = statue?.Slot,
+                StatueMeshRenderer = statue,
+            };
+
+            Log.Debug($"Mapping {normal.ToLongString()} to {statue.ToLongString()}");
+
+            if (HasMaterialSet(normal, out var normalMaterialSet))
+            {
+                rendererMap.NormalMaterialSet = normalMaterialSet;
+                Log.Debug($"    Normal MeshRenderer has {normalMaterialSet.ToShortString()} with {normalMaterialSet.Sets.Count} sets");
+            }
+
+            if (HasMaterialSet(statue, out var statueMaterialSet))
+            {
+                rendererMap.StatueMaterialSet = statueMaterialSet;
+                Log.Debug($"    Statue MeshRenderer has {statueMaterialSet.ToShortString()} with {statueMaterialSet.Sets.Count} sets");
+            }
+
+            if (rendererMap.NormalMaterialSet != null)
+            {
+                rendererMap.MaterialSets = rendererMap.NormalMaterialSet.Sets.Select(set => set.Select(material => new MaterialMap
+                {
+                    Normal = material,
+                    Statue = defaultMaterial,
+                    TransitionType = transitionType,
+                    UseAsIs = useDefaultAsIs,
+                }).ToList()).ToList();
+            }
+            else
+            {
+                rendererMap.MaterialSets = new List<List<MaterialMap>>()
+                {
+                    normal.Materials.Select(x => new MaterialMap
+                    {
+                        Normal = x,
+                        Statue = defaultMaterial,
+                        TransitionType = transitionType,
+                        UseAsIs = useDefaultAsIs,
+                    }).ToList()
+                };
+            }
+
+            for (int set = 0; set < rendererMap.MaterialSets.Count; set++)
+            {
+                for (int i = 0; i < rendererMap.MaterialSets[set].Count; i++)
+                {
+                    MaterialMap material = rendererMap.MaterialSets[set][i];
+                    if (material.Statue != null)
+                        Log.Debug($"    Material set {set}, slot {i} with {material.Normal.ToShortString()} linked to {material.Statue.ToShortString()}");
+                }
+            }
+
+            MeshRenderers.Add(rendererMap);
+        }
+
         private void ChangeMaterialReferences(IAssetProvider<Material> material, IAssetProvider<Material> newMaterial)
         {
             foreach (var map in MeshRenderers.SelectMany(x => x.MaterialSets).SelectMany(x => x))
@@ -1067,6 +1042,87 @@ namespace Restonite
                 if (map.Statue == material)
                     map.Statue = newMaterial;
             }
+        }
+
+        private int CommonStartSubstring(string a, string b)
+        {
+            var commonLength = 0;
+
+            for (var i = 0; i < a.Length && i < b.Length; i++)
+            {
+                if (a[i] == b[i])
+                    commonLength++;
+                else
+                    break;
+            }
+
+            return commonLength;
+        }
+
+        private bool HasMaterialSet(MeshRenderer renderer, out MaterialSet materialSet)
+        {
+            if (renderer != null && renderer.Materials.IsDriven && renderer.Materials.IsLinked)
+            {
+                var element = renderer.Materials.ActiveLink as SyncElement;
+                if (element.Component is MaterialSet)
+                {
+                    materialSet = element.Component as MaterialSet;
+                    return true;
+                }
+            }
+
+            materialSet = null;
+            return false;
+        }
+
+        private bool IsHierarchyEnabled(Slot slot)
+        {
+            var hierarchy = new List<Slot>();
+
+            while (slot != AvatarRoot)
+            {
+                hierarchy.Add(slot);
+                slot = slot.Parent;
+            }
+
+            return hierarchy.TrueForAll(x => x.ActiveSelf);
+        }
+
+        private bool IsStatueMeshRenderer(MeshRenderer renderer)
+        {
+            // Check name first
+            var names = new string[] { "statue", "petrified", "stone" };
+            foreach (var name in names)
+            {
+                if (renderer.Slot.Name.ToLower().Contains(name) || renderer.Slot.Parent.Name.ToLower().Contains(name))
+                    return true;
+            }
+
+            // Check if Enabled is driven by existing system
+            if (renderer.EnabledField.IsDriven && renderer.EnabledField.IsLinked)
+            {
+                var element = renderer.EnabledField.ActiveLink as SyncElement;
+                if (element.Slot.Name == "Avatar/Statue.BodyStatue" || element.Slot.Name == "Body Statue Active")
+                    return true;
+            }
+
+            // Check if Slot is driven by existing system
+            if (renderer.Slot.ActiveSelf_Field.IsDriven && renderer.Slot.ActiveSelf_Field.IsLinked)
+            {
+                var element = renderer.Slot.ActiveSelf_Field.ActiveLink as SyncElement;
+                if (element.Slot.Name == "Avatar/Statue.BodyStatue" || element.Slot.Name == "Body Statue Active")
+                    return true;
+            }
+
+            // Check if Slot's parent is driven by existing system
+            if (renderer.Slot.Parent.ActiveSelf_Field.IsDriven && renderer.Slot.Parent.ActiveSelf_Field.IsLinked)
+            {
+                var element = renderer.Slot.Parent.ActiveSelf_Field.ActiveLink as SyncElement;
+                if (element.Slot.Name == "Avatar/Statue.BodyStatue" || element.Slot.Name == "Body Statue Active")
+                    return true;
+            }
+
+            return false;
         }
 
         #endregion
