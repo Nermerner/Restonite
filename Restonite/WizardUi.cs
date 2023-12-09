@@ -192,7 +192,7 @@ namespace Restonite
 
                 _advancedModeSlot.ActiveSelf = false;
 
-                _wizardSlot.PositionInFrontOfUser(float3.Backward, distance: 3f);
+                _wizardSlot.PositionInFrontOfUser(float3.Backward, distance: 1f);
             }
             catch (Exception ex)
             {
