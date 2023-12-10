@@ -307,7 +307,7 @@ namespace Restonite
 
             // Find existing slots
             _defaults = StatueRoot.FindChildOrAdd("Defaults");
-            _userCustomization = StatueRoot.GetChildrenWithTag("StatueUserConfig").FirstOrDefault();
+            _userConfig = StatueRoot.GetChildrenWithTag("StatueUserConfig").FirstOrDefault();
 
             _drivers = StatueRoot.FindChildOrAdd("Drivers");
             _meshes = _drivers.FindChildOrAdd("Meshes");
@@ -617,13 +617,13 @@ namespace Restonite
             foreach (var copySlot in systemSlot.GetChildrenWithTag("CopyToStatue"))
             {
                 Log.Info($"Adding {copySlot.ToShortString()} with tag {copySlot.Tag}");
-                copySlot.Duplicate(StatueRoot);
+                copySlot.SetParent(StatueRoot, false);
             }
 
             var oldDefaults = _defaults.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
 
             // Update user config slot
-            if (_userCustomization == null)
+            if (_userConfig == null)
             {
                 var updateSlot = systemSlot.GetChildrenWithTag("StatueUserConfig").FirstOrDefault();
 
@@ -631,9 +631,10 @@ namespace Restonite
                 {
                     Log.Info($"Adding {updateSlot.ToShortString()} with tag {updateSlot.Tag}");
 
-                    updateSlot = updateSlot.Duplicate(StatueRoot);
+                    updateSlot.SetParent(StatueRoot, false);
+                    _userConfig = updateSlot;
 
-                    var dynVars = updateSlot
+                    var dynVars = _userConfig
                         .GetComponentsInChildren<IDynamicVariable>(filter: x => x.VariableName.StartsWith("Avatar/"))
                         .ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
 
@@ -673,7 +674,7 @@ namespace Restonite
             }
             else
             {
-                var existingDynVars = _userCustomization
+                var existingDynVars = _userConfig
                     .GetComponentsInChildren<IDynamicVariable>(filter: x => x.VariableName.StartsWith("Avatar/"))
                     .ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
 
@@ -703,7 +704,7 @@ namespace Restonite
                     foreach (var dynVar in newDynVars)
                     {
                         Log.Info($"Adding new user config slot for {dynVar.DynamicVariable.VariableName}");
-                        dynVar.Slot.Duplicate(_userCustomization);
+                        dynVar.Slot.SetParent(_userConfig, false);
                     }
 
                     // Update existing user config slots
@@ -725,7 +726,7 @@ namespace Restonite
                         {
                             Log.Warn($"User config slot for {dynVar.Existing.DynamicVariable.VariableName} have differing data types, overwriting");
                             dynVar.Existing.Slot.Destroy();
-                            dynVar.System.Slot.Duplicate(_userCustomization);
+                            dynVar.System.Slot.SetParent(_userConfig, false);
                         }
                     }
 
@@ -1004,7 +1005,7 @@ namespace Restonite
         private Slot _scratchSpace;
         private bool _skinnedMeshRenderersOnly;
         private Slot _statueMaterials;
-        private Slot _userCustomization;
+        private Slot _userConfig;
 
         #endregion
 
