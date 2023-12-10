@@ -734,6 +734,28 @@ namespace Restonite
                     _defaults = null;
                 }
             }
+
+            // Set default configs if null
+            if (_userConfig != null)
+            {
+                var avatarRoot = _userConfig.GetComponentInChildren<DynamicReferenceVariable<Slot>>(x => x.VariableName == "Avatar/Statue.AvatarRoot");
+                if (avatarRoot != null && avatarRoot.Reference.Target == null)
+                {
+                    avatarRoot.Reference.Target = AvatarRoot;
+                    Log.Info("Setting user config Avatar/Statue.AvatarRoot to avatar root slot");
+                }
+
+                var soundEffectDefault = _userConfig.GetComponentInChildren<DynamicReferenceVariable<IAssetProvider<AudioClip>>>(x => x.VariableName == "Avatar/Statue.SoundEffect.Default");
+                if (soundEffectDefault != null)
+                {
+                    var audioClip = soundEffectDefault.Slot.GetComponent<StaticAudioClip>();
+                    if (audioClip != null && soundEffectDefault.Reference.Target == null)
+                    {
+                        soundEffectDefault.Reference.Target = audioClip;
+                        Log.Info("Setting user config Avatar/Statue.SoundEffect.Default to default audio clip");
+                    }
+                }
+            }
         }
 
         public void ReadAvatarRoot(Slot newAvatarRoot, IAssetProvider<Material> defaultMaterial, bool skinnedMeshRenderersOnly, bool useDefaultAsIs, StatueType transitionType)
