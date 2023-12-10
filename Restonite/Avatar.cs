@@ -659,7 +659,7 @@ namespace Restonite
                         else if (typeA.GetGenericTypeDefinition() == typeof(DynamicReferenceVariable<>) && typeB.GetGenericTypeDefinition() == typeof(DynamicReferenceVariable<>) && typeA.GenericTypeArguments[0] == typeB.GenericTypeArguments[0])
                         {
                             Log.Info($"Migrating user config slot for {dynVar.Defaults.DynamicVariable.VariableName}");
-                            b.Reference.Value = a.Reference.Value;
+                            b.Reference.Target = a.Reference.Target;
                             dynVar.Defaults.Slot.Name = dynVar.System.Slot.Name;
                         }
                         else
