@@ -992,10 +992,10 @@ namespace Restonite
 
         #region Private Fields
 
+        private readonly List<IField<bool>> _existingDrivesForDisableOnFreeze = new List<IField<bool>>();
         private Slot _blendshapes;
         private Slot _defaults;
         private Slot _drivers;
-        private List<IField<bool>> _existingDrivesForDisableOnFreeze = new List<IField<bool>>();
         private Slot _generatedMaterials;
         private Slot _legacyAddons;
         private Slot _legacySystem;
