@@ -126,6 +126,7 @@ namespace Restonite
                 _avatar.CreateOrUpdateDefaults();
 
                 Log.Success("Setup completed successfully!");
+                Log.Success("Re-equip your avatar before testing the system.");
 
                 return true;
             }

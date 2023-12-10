@@ -1,4 +1,4 @@
-﻿using Elements.Core;
+using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -58,6 +58,7 @@ namespace Restonite
             _meshes.RemoveAllComponents(_ => true);
             _blendshapes.DestroyChildren();
 
+            var meshCount = 0;
             foreach (var map in MeshRenderers)
             {
                 if (map.NormalSlot == null || map.StatueSlot == null)
@@ -103,7 +104,10 @@ namespace Restonite
                 }
 
                 Log.Info($"Linked {count} blend shapes for {map.NormalSlot.ToShortString()}");
+                meshCount++;
             }
+
+            Log.Info($"Linked active state for {meshCount} slots");
         }
 
         public void CreateOrUpdateDefaults()
@@ -160,7 +164,6 @@ namespace Restonite
 
             AvatarRoot.GetComponents<VRIK>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
 
-            Log.Info("Searching for bones to drive");
             var boneChainSlots = new Dictionary<RefID, Slot>();
 
             AvatarRoot.GetComponentsInChildren<DynamicBoneChain>().ForEach((dbc) =>
@@ -173,36 +176,45 @@ namespace Restonite
 
             boneChainSlots.ToList().ForEach((dbcSlot) => AddFieldToMultidriver(dofDriver, dbcSlot.Value.ActiveSelf_Field));
 
-            Log.Info($"Added {boneChainSlots.Count} bones");
+            Log.Info($"Driving {boneChainSlots.Count} dynamic bones");
 
             // Disable visemes
-            AvatarRoot.GetComponentsInChildren<VisemeAnalyzer>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
-            AvatarRoot.GetComponentsInChildren<DirectVisemeDriver>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            var count = 0;
+            AvatarRoot.GetComponentsInChildren<VisemeAnalyzer>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<DirectVisemeDriver>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            Log.Info($"Driving {count} viseme components");
 
             // Disable animation systems (Wigglers, Panners, etc.)
-            AvatarRoot.GetComponentsInChildren<Wiggler>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
-            AvatarRoot.GetComponentsInChildren<Panner1D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
-            AvatarRoot.GetComponentsInChildren<Panner2D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
-            AvatarRoot.GetComponentsInChildren<Panner3D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
-            AvatarRoot.GetComponentsInChildren<Panner4D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
-            AvatarRoot.GetComponentsInChildren<Wobbler1D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
-            AvatarRoot.GetComponentsInChildren<Wobbler2D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
-            AvatarRoot.GetComponentsInChildren<Wobbler3D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
-            AvatarRoot.GetComponentsInChildren<Wobbler4D>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
+            count = 0;
+            AvatarRoot.GetComponentsInChildren<Wiggler>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<Panner1D>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<Panner2D>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<Panner3D>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<Panner4D>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<Wobbler1D>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<Wobbler2D>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<Wobbler3D>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<Wobbler4D>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            Log.Info($"Driving {count} animation system components");
 
             // Disable avatar expressions
-            AvatarRoot.GetComponentsInChildren<AvatarExpressionDriver>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
-            AvatarRoot.GetComponentsInChildren<HandPoser>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.EnabledField));
-            AvatarRoot.GetComponentsInChildren<EyeManager>().ForEach((component) => AddFieldToMultidriver(dofDriver, component.Slot.ActiveSelf_Field));
+            count = 0;
+            AvatarRoot.GetComponentsInChildren<AvatarExpressionDriver>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<HandPoser>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<EyeManager>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.Slot.ActiveSelf_Field); count++; });
+            Log.Info($"Driving {count} avatar expression components");
 
             // Disable toolshelfs
+            count = 0;
             AvatarRoot.GetComponentsInChildren<AvatarToolAnchor>().ForEach((component) =>
             {
                 if (component.AnchorPoint.Value == AvatarToolAnchor.Point.Toolshelf)
                 {
                     AddFieldToMultidriver(dofDriver, component.Slot.ActiveSelf_Field);
+                    count++;
                 }
             });
+            Log.Info($"Driving {count} tool shelves");
 
             // Detect any name badges
             var nameBadges = AvatarRoot.GetComponentsInChildren<AvatarNameTagAssigner>().ConvertAll((anta) => anta.Slot);
@@ -227,11 +239,14 @@ namespace Restonite
             }
 
             // Add any custom drives from the previous setup to the multidriver
+            count = 0;
             var customDrives = _existingDrivesForDisableOnFreeze.Except(dofDriver.Drives.Select(x => x.Target)).Distinct();
             foreach (var customDrive in customDrives)
             {
                 AddFieldToMultidriver(dofDriver, customDrive);
+                count++;
             }
+            Log.Info($"Driving {count} custom components/slots");
         }
 
         public void CreateOrUpdateEnableDrivers()
@@ -248,11 +263,13 @@ namespace Restonite
             normalVarReader.DefaultValue.Value = true;
             normalVarReader.Target.Value = normalDriver.Value.ReferenceID;
 
-            Log.Info($"=== Linking normal slots to BodyNormal");
+            var count = 0;
             foreach (var smr in MeshRenderers.Where(x => x.NormalMeshRenderer != null))
             {
                 normalDriver.Drives.Add().ForceLink(smr.NormalMeshRenderer.EnabledField);
+                count++;
             }
+            Log.Info($"Linked {count} normal MeshRenderers to BodyNormal");
 
             var statueDriverSlot = _drivers.FindChildOrAdd("Avatar/Statue.BodyStatue");
             statueDriverSlot.RemoveAllComponents(_ => true);
@@ -264,13 +281,13 @@ namespace Restonite
             statueVarReader.DefaultValue.Value = false;
             statueVarReader.Target.Value = statueDriver.Value.ReferenceID;
 
-            Log.Info($"=== Linking statue slots to BodyStatue");
+            count = 0;
             foreach (var smr in MeshRenderers.Where(x => x.StatueMeshRenderer != null))
             {
                 statueDriver.Drives.Add().ForceLink(smr.StatueMeshRenderer.EnabledField);
+                count++;
             }
-
-            Log.Info($"Linked {MeshRenderers.Count} MeshRenderers");
+            Log.Info($"Linked {count} statue MeshRenderers to BodyStatue");
         }
 
         public void CreateOrUpdateSlots()
@@ -307,7 +324,7 @@ namespace Restonite
 
         public void CreateOrUpdateVoiceDrivers()
         {
-            Log.Info("=== Driving WhisperVolume");
+            Log.Info("=== Driving whisper volume");
 
             var whisperVolSlot = _drivers.FindChildOrAdd("Avatar/Statue.WhisperVolume");
             whisperVolSlot.RemoveAllComponents(_ => true);
@@ -317,7 +334,7 @@ namespace Restonite
             whisperDriver.VariableName.Value = "Avatar/Statue.WhisperVolume";
             whisperDriver.Target.Value = AvatarRoot.GetComponentInChildren<AvatarAudioOutputManager>().WhisperConfig.Volume.ReferenceID;
 
-            Log.Info("=== Driving Voice and Shout");
+            Log.Info("=== Driving normal, shout and broadcast volume");
 
             var voiceVolSlot = _drivers.FindChildOrAdd("Avatar/Statue.VoiceVolume");
             voiceVolSlot.RemoveAllComponents(_ => true);
@@ -340,7 +357,7 @@ namespace Restonite
         {
             var count = 0;
 
-            Log.Info("=== Duplicating normal meshes to statue meshes");
+            Log.Info("=== Duplicating normal MeshRenderers to statue MeshRenderers");
 
             foreach (var map in MeshRenderers)
             {
@@ -456,7 +473,7 @@ namespace Restonite
                             var materialSlot = map.NormalMeshRenderer.Materials.GetElement(slot);
                             var element = materialSlot.ActiveLink as SyncElement;
                             if (materialSlot.IsDriven && materialSlot.IsLinked)
-                                Log.Warn($"{name} appears to already be driven by {element.Component.ToLongString()}");
+                                Log.Warn($"{name} appears to already be driven by {element.Component.ToLongString()}, attempting to set anyway");
 
                             map.NormalMeshRenderer.Materials[slot] = oldMaterialToNewNormalMaterialMap[key];
                         }
@@ -561,7 +578,7 @@ namespace Restonite
                                 var materialSlot = map.StatueMeshRenderer.Materials.GetElement(slot);
                                 var element = materialSlot.ActiveLink as SyncElement;
                                 if (materialSlot.IsDriven && materialSlot.IsLinked)
-                                    Log.Warn($"{name} appears to already be driven by {element.Component.ToLongString()}");
+                                    Log.Warn($"{name} appears to already be driven by {element.Component.ToLongString()}, attempting to set anyway");
 
                                 drives.Add().ForceLink(materialSlot);
                             }
