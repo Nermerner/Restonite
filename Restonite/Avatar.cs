@@ -1,4 +1,4 @@
-using Elements.Core;
+﻿using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -755,6 +755,20 @@ namespace Restonite
                         Log.Info("Setting user config Avatar/Statue.SoundEffect.Default to default audio clip");
                     }
                 }
+            }
+        }
+
+        public void OpenUserConfigInspector()
+        {
+            if (_userConfig != null)
+            {
+                _userConfig.OpenInspectorForTarget();
+                Log.Success("Check Statue User Config slot for system configuration options.");
+            }
+            else if (_defaults != null)
+            {
+                _defaults.OpenInspectorForTarget();
+                Log.Success("Check Defaults slot for system configuration options.");
             }
         }
 

@@ -128,6 +128,8 @@ namespace Restonite
                 Log.Success("Setup completed successfully!");
                 Log.Success("Re-equip your avatar before testing the system.");
 
+                _avatar.OpenUserConfigInspector();
+
                 return true;
             }
 
