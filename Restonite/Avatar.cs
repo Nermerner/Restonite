@@ -376,10 +376,7 @@ namespace Restonite
                         var foundMap = MeshRenderers.Find(toSearch => toSearch.NormalMeshRenderer?.Mesh.Value == renderer.Mesh.Value && toSearch.NormalSlot == map.NormalSlot);
                         if (foundMap != null)
                         {
-                            foundMap.StatueSlot = map.StatueSlot;
-                            foundMap.StatueMeshRenderer = renderer;
-
-                            Log.Debug($"{foundMap.NormalMeshRenderer.ToLongString()} linked to {foundMap.StatueMeshRenderer.ToLongString()}");
+                            UpdateMeshRenderer(foundMap, map.StatueSlot, renderer);
                         }
                         else
                         {
@@ -1160,6 +1157,20 @@ namespace Restonite
             }
 
             return false;
+        }
+
+        private void UpdateMeshRenderer(MeshRendererMap rendererMap, Slot statueSlot, MeshRenderer statue)
+        {
+            Log.Debug($"Mapping {rendererMap.NormalMeshRenderer.ToLongString()} to {statue.ToLongString()}");
+
+            rendererMap.StatueSlot = statueSlot;
+            rendererMap.StatueMeshRenderer = statue;
+
+            if (HasMaterialSet(statue, out var statueMaterialSet))
+            {
+                rendererMap.StatueMaterialSet = statueMaterialSet;
+                Log.Debug($"    Statue MeshRenderer has {statueMaterialSet.ToShortString()} with {statueMaterialSet.Sets.Count} sets");
+            }
         }
 
         #endregion
