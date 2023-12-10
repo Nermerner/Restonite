@@ -411,6 +411,25 @@ namespace Restonite
                     indexValueDriver.Source.Value = map.NormalMaterialSet.ActiveSetIndex.ReferenceID;
                     indexValueDriver.Target.Value = map.StatueMaterialSet.ActiveSetIndex.ReferenceID;
                 }
+                else if (map.NormalMaterialSet != null && map.StatueMaterialSet != null)
+                {
+                    // Ensure the same amount of sets
+                    while (map.StatueMaterialSet.Sets.Count < map.NormalMaterialSet.Sets.Count)
+                        map.StatueMaterialSet.Sets.Add();
+
+                    while (map.StatueMaterialSet.Sets.Count > map.NormalMaterialSet.Sets.Count)
+                        map.StatueMaterialSet.Sets.RemoveAt(map.StatueMaterialSet.Sets.Count - 1);
+
+                    for (int i = 0; i < map.NormalMaterialSet.Sets.Count; i++)
+                    {
+                        // Ensure the same amount of material slots
+                        while (map.StatueMaterialSet.Sets[i].Count < map.NormalMaterialSet.Sets[i].Count)
+                            map.StatueMaterialSet.Sets[i].Add();
+
+                        while (map.StatueMaterialSet.Sets[i].Count > map.NormalMaterialSet.Sets[i].Count)
+                            map.StatueMaterialSet.Sets[i].RemoveAt(map.StatueMaterialSet.Sets[i].Count - 1);
+                    }
+                }
             }
 
             Log.Info($"Duplicated {count} statue slots");
