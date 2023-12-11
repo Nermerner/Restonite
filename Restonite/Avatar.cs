@@ -1,4 +1,4 @@
-using Elements.Core;
+﻿using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -465,6 +465,9 @@ namespace Restonite
                 {
                     for (int slot = 0; slot < map.MaterialSets[set].Count; ++slot)
                     {
+                        if (map.MaterialSets[set][slot].Normal == null)
+                            continue;
+
                         var name = $"{map.NormalMeshRenderer.ToLongString()}, material set {set}, slot {slot}";
 
                         var oldMaterial = map.MaterialSets[set][slot].Normal;
