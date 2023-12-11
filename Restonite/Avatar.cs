@@ -1,4 +1,4 @@
-﻿using Elements.Core;
+using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -85,21 +85,29 @@ namespace Restonite
                 var count = 0;
                 for (var j = 0; j < normalSmr.BlendShapeCount; j++)
                 {
-                    // Get the blendshape for the normal and statue mesh for a given index
-                    var normalBlendshapeName = normalSmr.BlendShapeName(j);
-                    var normalBlendshape = normalSmr.GetBlendShape(normalBlendshapeName);
-
-                    var statueBlendshapeName = statueSmr.BlendShapeName(j);
-                    var statueBlendshape = statueSmr.GetBlendShape(statueBlendshapeName);
-
-                    // Only ValueCopy driven blendshapes
-                    if (normalBlendshapeName == statueBlendshapeName && normalBlendshape?.IsDriven == true && statueBlendshape != null)
+                    try
                     {
-                        var valueCopy = blendshapeDrivers.AttachComponent<ValueCopy<float>>();
-                        valueCopy.Source.Value = normalBlendshape.ReferenceID;
-                        valueCopy.Target.Value = statueBlendshape.ReferenceID;
+                        // Get the blendshape for the normal and statue mesh for a given index
+                        var normalBlendshapeName = normalSmr.BlendShapeName(j);
+                        var normalBlendshape = normalSmr.GetBlendShape(normalBlendshapeName);
 
-                        count++;
+                        var statueBlendshapeName = statueSmr.BlendShapeName(j);
+                        var statueBlendshape = statueSmr.GetBlendShape(statueBlendshapeName);
+
+                        // Only ValueCopy driven blendshapes
+                        if (normalBlendshapeName == statueBlendshapeName && normalBlendshape?.IsDriven == true && statueBlendshape != null)
+                        {
+                            var valueCopy = blendshapeDrivers.AttachComponent<ValueCopy<float>>();
+                            valueCopy.Source.Value = normalBlendshape.ReferenceID;
+                            valueCopy.Target.Value = statueBlendshape.ReferenceID;
+
+                            count++;
+                        }
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        // Have seen this happen
+                        // Ignore and continue
                     }
                 }
 
