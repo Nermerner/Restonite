@@ -84,7 +84,7 @@ namespace Restonite
                 Log.Setup(_ui, Debug, Msg, Warn, Error);
             }
 
-            public bool InstallSystemOnAvatar(Slot scratchSpace, SyncRef<Slot> statueSystemFallback)
+            public bool InstallSystemOnAvatar(Slot scratchSpace, SyncRef<Slot> statueSystemFallback, SyncRef<Slot> installSlot, SyncRef<Slot> contextMenuSlot)
             {
                 Log.Info($"=== Starting install for avatar {_avatar.AvatarRoot.ToShortString()}");
 
@@ -94,7 +94,7 @@ namespace Restonite
 
                 _avatar.SetScratchSpace(scratchSpace);
 
-                _avatar.CreateOrUpdateSlots();
+                _avatar.CreateOrUpdateSlots(installSlot);
                 _avatar.SetupRootDynVar();
 
                 // Add statue system objects
@@ -103,7 +103,7 @@ namespace Restonite
                     return false;
 
                 _avatar.RemoveLegacySystem();
-                _avatar.InstallRemasterSystem(systemSlot);
+                _avatar.InstallRemasterSystem(systemSlot, contextMenuSlot);
 
                 if (!_avatar.DuplicateMeshes())
                     return false;

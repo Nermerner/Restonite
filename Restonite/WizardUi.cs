@@ -11,7 +11,7 @@ namespace Restonite
     {
         #region Public Constructors
 
-        public WizardUi(Slot slot, string title, Avatar avatarReader, Func<Slot, SyncRef<Slot>, bool> onInstall)
+        public WizardUi(Slot slot, string title, Avatar avatarReader, Func<Slot, SyncRef<Slot>, SyncRef<Slot>, SyncRef<Slot>, bool> onInstall)
         {
             try
             {
@@ -26,6 +26,8 @@ namespace Restonite
                 _baseStatueMaterial = Data.AddSlot("baseMaterial").AttachComponent<ReferenceField<IAssetProvider<Material>>>();
                 _statueType = Data.AddSlot("statueType").AttachComponent<ValueField<int>>();
                 _foundMeshRenderers = Data.AddSlot("foundMRs").AttachComponent<ReferenceMultiplexer<MeshRenderer>>();
+                _contextMenuSlot = Data.AddSlot("contextMenuSlot").AttachComponent<ReferenceField<Slot>>();
+                _installSlot = Data.AddSlot("installSlot").AttachComponent<ReferenceField<Slot>>();
 
                 /*
                 - Add avatar space
@@ -61,7 +63,7 @@ namespace Restonite
 
                 UI.NestInto(left);
 
-                UI.SplitVertically(0.5f, out RectTransform top, out RectTransform bottom);
+                UI.SplitVertically(0.63f, out RectTransform top, out RectTransform bottom);
 
                 UI.NestInto(top);
 
@@ -122,9 +124,23 @@ namespace Restonite
                 _confirmButton = UI.Button("Install");
                 _confirmButton.LocalPressed += OnInstallButtonPressed;
 
-                UI.Text("(Optional, Advanced) Override system:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                UI.Spacer(12f);
+
+                UI.Text("Advanced (Optional)").HorizontalAlign.Value = TextHorizontalAlignment.Left;
+
+                UI.Spacer(6f);
+
+                UI.Text("Override system:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
                 UI.Next("Override system");
                 UI.Current.AttachComponent<RefEditor>().Setup(_statueSystemFallback.Reference);
+
+                UI.Text("Installation slot:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                UI.Next("Installation slot");
+                UI.Current.AttachComponent<RefEditor>().Setup(_installSlot.Reference);
+
+                UI.Text("Context menu slot:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                UI.Next("Context menu slot");
+                UI.Current.AttachComponent<RefEditor>().Setup(_contextMenuSlot.Reference);
 
                 UI.Spacer(24f);
 
@@ -244,10 +260,12 @@ namespace Restonite
         private readonly ReferenceField<Slot> _avatarRoot;
         private readonly ReferenceField<IAssetProvider<Material>> _baseStatueMaterial;
         private readonly Button _confirmButton;
+        private readonly ReferenceField<Slot> _contextMenuSlot;
         private readonly Text _debugText;
         private readonly Checkbox _defaultMaterialAsIs;
         private readonly ReferenceMultiplexer<MeshRenderer> _foundMeshRenderers;
-        private readonly Func<Slot, SyncRef<Slot>, bool> _installSystemOnAvatar;
+        private readonly ReferenceField<Slot> _installSlot;
+        private readonly Func<Slot, SyncRef<Slot>, SyncRef<Slot>, SyncRef<Slot>, bool> _installSystemOnAvatar;
         private readonly Slot _listPanel;
         private readonly Slot _simpleModeSlot;
         private readonly Checkbox _skinnedMeshRenderersOnly;
@@ -265,7 +283,7 @@ namespace Restonite
             var scratchSpace = _wizardSlot.AddSlot("Scratch space");
             try
             {
-                var result = _installSystemOnAvatar(scratchSpace, _statueSystemFallback.Reference);
+                var result = _installSystemOnAvatar(scratchSpace, _statueSystemFallback.Reference, _installSlot.Reference, _contextMenuSlot.Reference);
                 HighlightHelper.FlashHighlight(_avatarRoot.Reference.Target, (_a) => true, result ? new colorX(0.5f, 0.5f, 0.5f, 1.0f) : new colorX(1.0f, 0.0f, 0.0f, 1.0f));
             }
             catch (Exception ex)

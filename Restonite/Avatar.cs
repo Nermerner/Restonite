@@ -1,4 +1,4 @@
-﻿using Elements.Core;
+using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -298,12 +298,22 @@ namespace Restonite
             Log.Info($"Linked {count} statue MeshRenderers to BodyStatue");
         }
 
-        public void CreateOrUpdateSlots()
+        public void CreateOrUpdateSlots(SyncRef<Slot> installSlot)
         {
             Log.Info("=== Setting up statue root slot on avatar");
 
+            var rootInstallSlot = AvatarRoot;
+            if (installSlot.Value != RefID.Null)
+                rootInstallSlot = installSlot.Target;
+
+            // Install to the selected slot
             if (StatueRoot == null)
-                StatueRoot = AvatarRoot.AddSlot("Statue");
+                StatueRoot = rootInstallSlot.AddSlot("Statue");
+
+            // Reparent if a slot is given and the root is not already parented under it
+            if (installSlot.Value != RefID.Null && StatueRoot.Parent != rootInstallSlot)
+                StatueRoot.SetParent(rootInstallSlot, false);
+
             StatueRoot.Tag = "StatueSystemSetupSlot";
 
             // Reparent old setups
@@ -617,18 +627,44 @@ namespace Restonite
             }
         }
 
-        public void InstallRemasterSystem(Slot systemSlot)
+        public void InstallRemasterSystem(Slot systemSlot, SyncRef<Slot> contextMenuSlot)
         {
             Log.Info("=== Installing Remaster system on avatar");
 
             // Remove the old system
-            StatueRoot.DestroyChildren(filter: x => x.Tag == "CopyToStatue");
+            foreach (var toDestroy in AvatarRoot.GetChildrenWithTag("CopyToStatue"))
+                toDestroy.Destroy();
 
             // Install the new system
             foreach (var copySlot in systemSlot.GetChildrenWithTag("CopyToStatue"))
             {
                 Log.Info($"Adding {copySlot.ToShortString()} with tag {copySlot.Tag}");
                 copySlot.SetParent(StatueRoot, false);
+            }
+
+            // Place context menu elsewhere if desired
+            if (contextMenuSlot.Value != RefID.Null)
+            {
+                var rootContextMenu = StatueRoot.GetComponentInChildren<RootContextMenuItem>();
+                if (rootContextMenu != null)
+                {
+                    var slot = rootContextMenu.Slot;
+                    var menuSlot = slot.FindChild("Statufication");
+                    if (menuSlot != null)
+                    {
+                        // Remove RootContextMenuItem
+                        slot.RemoveComponent(rootContextMenu);
+
+                        // Add new menu item reference the submenu
+                        var itemSource = slot.AttachComponent<ContextMenuItemSource>();
+                        itemSource.LabelText = "Statue";
+                        itemSource.Sprite.Target = menuSlot.GetComponent<SpriteProvider>();
+                        var subMenu = slot.AttachComponent<ContextMenuSubmenu>();
+                        subMenu.ItemsRoot.Target = menuSlot;
+
+                        slot.SetParent(contextMenuSlot.Target, false);
+                    }
+                }
             }
 
             var oldDefaults = _defaults.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
