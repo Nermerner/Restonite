@@ -99,28 +99,32 @@ namespace Restonite
                 };
 
                 _skinnedMeshRenderersOnly = UI.HorizontalElementWithLabel("Skinned Meshes only", 0.925f, () => UI.Checkbox(true));
+                _skinnedMeshRenderersOnly.State.OnValueChange += _ => OnValuesChanged(true);
 
                 UI.Text("Avatar root slot:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
                 UI.Next("Avatar root slot");
                 var avatarField = UI.Current.AttachComponent<RefEditor>();
                 avatarField.Setup(_avatarRoot.Reference);
-                _avatarRoot.Reference.OnValueChange += _ => OnValuesChanged();
+                _avatarRoot.Reference.OnValueChange += _ => OnValuesChanged(true);
 
                 UI.Text("Default statue material:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
                 UI.Next("Default statue material");
                 UI.Current.AttachComponent<RefEditor>().Setup(_baseStatueMaterial.Reference);
-                _baseStatueMaterial.Reference.OnValueChange += _ => OnValuesChanged();
+                _baseStatueMaterial.Reference.OnValueChange += _ => OnValuesChanged(false);
 
                 _defaultMaterialAsIs = UI.HorizontalElementWithLabel("Use default material as-is", 0.925f, () => UI.Checkbox(false));
-                _defaultMaterialAsIs.State.OnValueChange += _ => OnValuesChanged();
+                _defaultMaterialAsIs.State.OnValueChange += _ => OnValuesChanged(false);
 
                 UI.Text("Default transition type:").HorizontalAlign.Value = TextHorizontalAlignment.Left;
                 UI.Next("Default transition type");
                 var editor = new StatueTypeEditor();
                 editor.Setup(UI.Current, _statueType.Value);
-                _statueType.Value.OnValueChange += _ => OnValuesChanged();
+                _statueType.Value.OnValueChange += _ => OnValuesChanged(false);
 
-                UI.Spacer(24f);
+                UI.Spacer(12f);
+
+                var refreshButton = UI.Button("Refresh");
+                refreshButton.LocalPressed += (a, b) => OnValuesChanged(true);
                 _confirmButton = UI.Button("Install");
                 _confirmButton.LocalPressed += OnInstallButtonPressed;
 
@@ -299,11 +303,14 @@ namespace Restonite
             }
         }
 
-        private void OnValuesChanged()
+        private void OnValuesChanged(bool readAvatar)
         {
             try
             {
-                _avatar.ReadAvatarRoot(_avatarRoot.Reference.Target, _baseStatueMaterial.Reference.Target, _skinnedMeshRenderersOnly.State.Value, _defaultMaterialAsIs.State.Value, (StatueType)_statueType.Value.Value);
+                if (readAvatar)
+                    _avatar.ReadAvatarRoot(_avatarRoot.Reference.Target, _baseStatueMaterial.Reference.Target, _skinnedMeshRenderersOnly.State.Value, _defaultMaterialAsIs.State.Value, (StatueType)_statueType.Value.Value);
+                else
+                    _avatar.UpdateParameters(_baseStatueMaterial.Reference.Target, _defaultMaterialAsIs.State.Value, (StatueType)_statueType.Value.Value);
 
                 RefreshUI();
             }

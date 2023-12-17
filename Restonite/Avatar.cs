@@ -861,24 +861,7 @@ namespace Restonite
                 Log.Info("Avatar has legacy system installed");
             }
 
-            var statue0Material = (IAssetProvider<Material>)_generatedMaterials?
-                .FindChild("Statue Materials")?
-                .FindChild("Statue 0")?
-                .GetComponent<AssetProvider<Material>>();
-
-            if ((defaultMaterial == null || defaultMaterial.ReferenceID == RefID.Null) && statue0Material != null)
-            {
-                defaultMaterial = statue0Material;
-                Log.Debug($"Using existing default statue material, {statue0Material.ToShortString()}");
-            }
-            else if (defaultMaterial != null && defaultMaterial.ReferenceID != RefID.Null)
-            {
-                Log.Info($"Using user supplied default statue material, {defaultMaterial.ToShortString()}");
-            }
-            else
-            {
-                Log.Warn("Couldn't find a material to use for default statue material");
-            }
+            defaultMaterial = GetDefaultMaterial(defaultMaterial);
 
             MeshRenderers.Add(new MeshRendererMap
             {
@@ -1016,6 +999,24 @@ namespace Restonite
             else
             {
                 Log.Info("Avatar DynVarSpace already exists, skipping");
+            }
+        }
+
+        public void UpdateParameters(IAssetProvider<Material> defaultMaterial, bool useDefaultAsIs, StatueType transitionType)
+        {
+            defaultMaterial = GetDefaultMaterial(defaultMaterial);
+
+            foreach (var map in MeshRenderers)
+            {
+                foreach (var set in map.MaterialSets)
+                {
+                    foreach (var mat in set)
+                    {
+                        mat.Statue = defaultMaterial;
+                        mat.UseAsIs = useDefaultAsIs;
+                        mat.TransitionType = transitionType;
+                    }
+                }
             }
         }
 
@@ -1194,6 +1195,30 @@ namespace Restonite
             }
 
             return commonLength;
+        }
+
+        private IAssetProvider<Material> GetDefaultMaterial(IAssetProvider<Material> defaultMaterial)
+        {
+            var statue0Material = (IAssetProvider<Material>)_generatedMaterials?
+                .FindChild("Statue Materials")?
+                .FindChild("Statue 0")?
+                .GetComponent<AssetProvider<Material>>();
+
+            if ((defaultMaterial == null || defaultMaterial.ReferenceID == RefID.Null) && statue0Material != null)
+            {
+                defaultMaterial = statue0Material;
+                Log.Debug($"Using existing default statue material, {statue0Material.ToShortString()}");
+            }
+            else if (defaultMaterial != null && defaultMaterial.ReferenceID != RefID.Null)
+            {
+                Log.Info($"Using user supplied default statue material, {defaultMaterial.ToShortString()}");
+            }
+            else
+            {
+                Log.Warn("Couldn't find a material to use for default statue material");
+            }
+
+            return defaultMaterial;
         }
 
         private bool HasMaterialSet(MeshRenderer renderer, out MaterialSet materialSet)
