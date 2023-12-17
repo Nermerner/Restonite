@@ -832,6 +832,7 @@ namespace Restonite
             if (AvatarRoot == null)
                 return;
 
+            Log.Clear();
             Log.Info($"=== Reading avatar {AvatarRoot.ToShortString()}");
 
             var children = AvatarRoot.GetAllChildren();

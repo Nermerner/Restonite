@@ -224,6 +224,12 @@ namespace Restonite
 
         #region Public Methods
 
+        public void ClearLog()
+        {
+            if(_debugText != null)
+                _debugText.Content.Value = string.Empty;
+        }
+
         public void LogDebug(string logMessage)
         {
             if (_debugText != null)

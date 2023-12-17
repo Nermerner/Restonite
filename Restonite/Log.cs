@@ -52,5 +52,10 @@ namespace Restonite
             _info(logMessage);
             _ui.LogSuccess(logMessage);
         }
+
+        public static void Clear()
+        {
+            _ui.ClearLog();
+        }
     }
 }
