@@ -50,16 +50,47 @@ namespace Restonite
                 - Configure material system specifically
                 */
 
-                var UI = RadiantUI_Panel.SetupPanel(slot, title, new float2(800f, 1000f));
+                var UI = RadiantUI_Panel.SetupPanel(slot, title, new float2(1000f, 1000f));
                 RadiantUI_Constants.SetupEditorStyle(UI);
 
                 UI.Canvas.MarkDeveloper();
                 UI.Canvas.AcceptPhysicalTouch.Value = false;
 
-                UI.SplitHorizontally(0.5f, out RectTransform left, out RectTransform right);
+                var columns = UI.SplitHorizontally(0.2f, 0.4f, 0.4f);
 
+                var help = columns[0];
+                var left = columns[1];
+                var right = columns[2];
+
+                help.OffsetMax.Value = new float2(-10f);
+                left.OffsetMin.Value = new float2(10f);
                 left.OffsetMax.Value = new float2(-10f);
                 right.OffsetMin.Value = new float2(10f);
+
+                UI.NestInto(help);
+
+                UI.SplitVertically(0.03f, out RectTransform helpHeader, out RectTransform helpContent);
+
+                UI.NestInto(helpHeader);
+                var helpTitle = UI.Text("Help");
+                helpTitle.HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                helpTitle.VerticalAlign.Value = TextVerticalAlignment.Top;
+
+                UI.NestInto(helpContent);
+                UI.ScrollArea();
+                UI.FitContent(SizeFit.Disabled, SizeFit.MinSize);
+                UI.VerticalLayout();
+
+                var helpText = UI.Text("", false);
+                helpText.HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                helpText.VerticalAlign.Value = TextVerticalAlignment.Top;
+                helpText.Size.Value = 10f;
+                helpText.VerticalAutoSize.Value = false;
+                helpText.HorizontalAutoSize.Value = false;
+                helpText.Slot.RemoveComponent(helpText.Slot.GetComponent<LayoutElement>());
+                helpText.Content.Value = _helpText;
+
+                UI.NestOut();
 
                 UI.NestInto(left);
 
@@ -82,9 +113,11 @@ namespace Restonite
                     {
                         _advancedModeSlot.ActiveSelf = true;
                         _simpleModeSlot.ActiveSelf = false;
-                        UI.Canvas.Size.Value = new float2(1600f, 1000f);
-                        left.AnchorMax.Value = new float2(0.25f, left.AnchorMax.Value.y);
-                        right.AnchorMin.Value = new float2(0.25f, right.AnchorMin.Value.y);
+                        UI.Canvas.Size.Value = new float2(1800f, 1000f);
+                        help.AnchorMax.Value = new float2(0.11f, help.AnchorMax.Value.y);
+                        left.AnchorMin.Value = new float2(0.11f, left.AnchorMin.Value.y);
+                        left.AnchorMax.Value = new float2(0.33f, left.AnchorMax.Value.y);
+                        right.AnchorMin.Value = new float2(0.33f, right.AnchorMin.Value.y);
 
                         RefreshUI();
                     }
@@ -92,9 +125,11 @@ namespace Restonite
                     {
                         _advancedModeSlot.ActiveSelf = false;
                         _simpleModeSlot.ActiveSelf = true;
-                        UI.Canvas.Size.Value = new float2(800f, 1000f);
-                        left.AnchorMax.Value = new float2(0.5f, left.AnchorMax.Value.y);
-                        right.AnchorMin.Value = new float2(0.5f, right.AnchorMin.Value.y);
+                        UI.Canvas.Size.Value = new float2(1000f, 1000f);
+                        help.AnchorMax.Value = new float2(0.2f, help.AnchorMax.Value.y);
+                        left.AnchorMin.Value = new float2(0.2f, left.AnchorMin.Value.y);
+                        left.AnchorMax.Value = new float2(0.6f, left.AnchorMax.Value.y);
+                        right.AnchorMin.Value = new float2(0.6f, right.AnchorMin.Value.y);
                     }
                 };
 
@@ -233,31 +268,31 @@ namespace Restonite
         public void LogDebug(string logMessage)
         {
             if (_debugText != null)
-                _debugText.Content.Value = $"<color=gray>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText?.Content?.Value ?? ""}";
+                _debugText.Content.Value = $"<color=gray>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
         }
 
         public void LogError(string logMessage)
         {
             if (_debugText != null)
-                _debugText.Content.Value = $"<color=red>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText?.Content?.Value ?? ""}";
+                _debugText.Content.Value = $"<color=red>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
         }
 
         public void LogInfo(string logMessage)
         {
             if (_debugText != null)
-                _debugText.Content.Value = $"<color=#e0e0e0>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText?.Content?.Value ?? ""}";
+                _debugText.Content.Value = $"<color=#e0e0e0>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
         }
 
         public void LogSuccess(string logMessage)
         {
             if (_debugText != null)
-                _debugText.Content.Value = $"<color=green>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText?.Content?.Value ?? ""}";
+                _debugText.Content.Value = $"<color=green>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
         }
 
         public void LogWarn(string logMessage)
         {
             if (_debugText != null)
-                _debugText.Content.Value = $"<color=yellow>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText?.Content?.Value ?? ""}";
+                _debugText.Content.Value = $"<color=yellow>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
         }
 
         #endregion
@@ -282,6 +317,37 @@ namespace Restonite
         private readonly ReferenceField<Slot> _statueSystemFallback;
         private readonly ValueField<int> _statueType;
         private readonly Slot _wizardSlot;
+        private readonly string _helpText = @"This mod installs and updates the Remaster system on an avatar.
+
+Advanced Mode:
+Advanced mode allows more fine grained control of what materials and options to use where.
+
+Skinned Meshes only:
+Check this option to only look for SkinnedMeshRenderers. If you want to include regular MeshRenderers typically used for procedural meshes like BoxMesh etc uncheck this option.
+
+Avatar root:
+The root slot of the avatar to install to. The mod will try to find any existing legacy or remaster installations. Legacy installations can be updated to remaster. Additionally it will try to match the normal MeshRenderers with any existing statue MeshRenderers. If a MeshRenderer appears to show up twice it's likely it hasn't found a match. You can workaround this by adding ""Statue"" to the name of the slot.
+
+Default statue material:
+The material to use as the default statue material. It can be left null if you want to use the material installed previously. Additional materials can be added later using Advanced Mode.
+
+Use default material as-is:
+Normally the mod will merge the statue materials with your normal avatar materials' normal maps. This can preserve avatar details. Use this option to use the statue materials without modifying them. This can be changed per material slot using Advanced Mode.
+
+Default transition type:
+The transition type to use for when the avatar is turned into a statue. AlphaCutout requires special alpha textures. PlaneSlicer and RadialSlicer require PBS_Metallic or PBS_Specular materials. This can be changed per material slot using Advanced Mode.
+
+Refresh:
+Use this button to read the avatar root again and refresh the MeshRenderers. Any individual changes made in Advanced Mode will be lost.
+
+Install:
+Performs a fresh install of the remaster system on the avatar.
+
+Update:
+Updates the installation of the remaster system on the avatar with new materials, meshes and installation options.
+
+Update from legacy:
+Updates the legacy installation to a remaster installation on the avatar.";
         private bool _refreshingList;
 
         #endregion
