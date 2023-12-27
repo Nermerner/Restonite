@@ -1056,7 +1056,7 @@ namespace Restonite
                             if ((material.TransitionType == StatueType.PlaneSlicer || material.TransitionType == StatueType.RadialSlicer)
                                 && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular) && !(material.Normal is PBS_DistanceLerpMaterial))
                             {
-                                Log.Error($"{material.GetType().Name} does not support {material.TransitionType}, aborting");
+                                Log.Error($"{material.Normal.GetType().Name} does not support {material.TransitionType}, aborting");
                                 return false;
                             }
                             else if ((material.TransitionType == StatueType.AlphaFade || material.TransitionType == StatueType.AlphaCutout)
@@ -1064,7 +1064,7 @@ namespace Restonite
                                 && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular)
                                 && !(material.Normal is XiexeToonMaterial) && !(material.Normal is PBS_DistanceLerpMaterial))
                             {
-                                Log.Error($"{material.GetType().Name} does not support {material.TransitionType}, aborting");
+                                Log.Error($"{material.Normal.GetType().Name} does not support {material.TransitionType}, aborting");
                                 return false;
                             }
                         }
