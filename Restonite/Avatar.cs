@@ -68,11 +68,19 @@ namespace Restonite
                     continue;
 
                 // Remove any DirectVisemeDrivers from statue slots as these will be driven by ValueCopys
-                var visemeDriver = map.StatueSlot.GetComponent<DirectVisemeDriver>();
-                if (visemeDriver != null)
+                var visemeDrivers = map.StatueSlot.GetComponents<DirectVisemeDriver>();
+                foreach (var visemeDriver in visemeDrivers)
                 {
                     map.StatueSlot.RemoveComponent(visemeDriver);
                     Log.Info($"Removed DirectVisemeDriver on {map.StatueSlot.ToShortString()}");
+                }
+
+                // Remove any AvatarExpressionDrivers from statue slots as these will be driven by ValueCopys
+                var expressionDrivers = map.StatueSlot.GetComponents<AvatarExpressionDriver>();
+                foreach (var expressionDriver in expressionDrivers)
+                {
+                    map.StatueSlot.RemoveComponent(expressionDriver);
+                    Log.Info($"Removed AvatarExpressionDriver on {map.StatueSlot.ToShortString()}");
                 }
 
                 var blendshapeDrivers = _blendshapes.AddSlot(map.NormalSlot.Name);
