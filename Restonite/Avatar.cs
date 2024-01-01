@@ -556,13 +556,17 @@ namespace Restonite
                         var normalMaterial = map.MaterialSets[set][slot].Normal;
                         var statueMaterial = map.MaterialSets[set][slot].Statue;
                         var defaultMaterialAsIs = isBlinder || map.MaterialSets[set][slot].UseAsIs;
-                        var key = defaultMaterialAsIs ? statueMaterial.ReferenceID : normalMaterial.ReferenceID;
+
+                        if (statueMaterial == null)
+                            continue;
 
                         if (!isBlinder && normalMaterial == null && statueMaterial != null)
                         {
                             Log.Warn($"{map.NormalMeshRenderer.ToLongString()}, material {slot} is null, skipping statue material");
                             continue;
                         }
+
+                        var key = defaultMaterialAsIs ? statueMaterial.ReferenceID : normalMaterial.ReferenceID;
 
                         if (!oldMaterialToStatueMaterialMap.ContainsKey(key))
                         {
