@@ -4,17 +4,14 @@ This mod allows easy installation of the Statufication Remaster system for your 
 
 To setup your avatar follow the procedure below:
 
-1. Drag the avatar root slot to the wizard.
-2. Drag a material of your choice to the wizard. This will be used as default when you statuefy. You can optionally choose whether to use the material as-is or to allow the installer to merge the material with your avatar's materials.
-3. Select what type of transition you'd like for your avatar. Note that Alpha Cutout requires special alpha textures to be created for your avatar to work.
-4. Check that the correct MeshRenderers are found for your avatar on the right side.
-5. Click the Statuefy! button and the mod will setup your avatar.
+1. Equip a Dev Tool and from the context menu select Create -> Editors -> Statue System Wizard (Mod)
+2. Drag the avatar root slot to the wizard.
+3. Drag a material of your choice to the wizard. This will be used as default when you statuefy. You can optionally choose whether to use the material as-is or to allow the installer to merge the material with your avatar's materials.
+4. Select what type of transition you'd like for your avatar. Note that Alpha Cutout requires special alpha textures to be created for your avatar to work.
+5. Check that the correct MeshRenderers are found for your avatar on the right side.
+6. Click the Install button and the mod will setup your avatar.
 
 If everything worked you'll see a green success message in the log below. If not, an error message will be visible which tells you what went wrong.
-
-## Known issues
-
-- Radial Slicer transition type currently does not work correctly with the Remaster system.
 
 ## Installation
 
