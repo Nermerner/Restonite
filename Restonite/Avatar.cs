@@ -399,9 +399,15 @@ namespace Restonite
 
                     foreach (var renderer in statueRenderers)
                     {
-                        var foundMap = MeshRenderers.Find(toSearch => toSearch.NormalMeshRenderer?.Mesh.Value == renderer.Mesh.Value && toSearch.NormalSlot == map.NormalSlot);
+                        var foundMap = MeshRenderers.Find(toSearch => toSearch.NormalSlot == map.NormalSlot && (toSearch.NormalMeshRenderer?.Mesh.Value == renderer.Mesh.Value || toSearch.NormalMeshRenderer?.Mesh.Value.GetType() == renderer.Mesh.Value.GetType()));
                         if (foundMap != null)
                         {
+                            if (renderer.Mesh.Value != foundMap.NormalMeshRenderer.Mesh.Value)
+                            {
+                                foundMap.StatueSlot.RemoveComponent(renderer.Mesh.Value);
+                                renderer.Mesh.Value = foundMap.NormalMeshRenderer.Mesh.Value;
+                            }
+
                             UpdateMeshRenderer(foundMap, map.StatueSlot, renderer);
                         }
                         else
