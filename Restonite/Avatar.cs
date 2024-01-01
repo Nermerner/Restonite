@@ -1000,6 +1000,13 @@ namespace Restonite
             }
         }
 
+        public void RemoveUnmatchedMeshRenderers()
+        {
+            var toRemoveList = MeshRenderers.Where(x => x.NormalMeshRenderer != null && x.StatueMeshRenderer == null).ToList();
+            foreach (var toRemove in toRemoveList)
+                RemoveMeshRenderer(toRemove);
+        }
+
         public void SetScratchSpace(Slot scratchSpace)
         {
             _scratchSpace = scratchSpace;

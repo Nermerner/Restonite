@@ -94,7 +94,7 @@ namespace Restonite
 
                 UI.NestInto(left);
 
-                UI.SplitVertically(0.63f, out RectTransform top, out RectTransform bottom);
+                UI.SplitVertically(0.65f, out RectTransform top, out RectTransform bottom);
 
                 UI.NestInto(top);
 
@@ -106,8 +106,8 @@ namespace Restonite
                 VerticalLayout verticalLayout = UI.VerticalLayout(4f, childAlignment: Alignment.TopLeft);
                 verticalLayout.ForceExpandHeight.Value = true;
 
-                _advancedMode = UI.HorizontalElementWithLabel("Advanced mode", 0.925f, () => UI.Checkbox(false));
-                _advancedMode.State.OnValueChange += (state) =>
+                var advancedMode = UI.HorizontalElementWithLabel("Advanced mode", 0.925f, () => UI.Checkbox(false));
+                advancedMode.State.OnValueChange += (state) =>
                 {
                     if (state.Value)
                     {
@@ -158,10 +158,17 @@ namespace Restonite
 
                 UI.Spacer(12f);
 
-                var refreshButton = UI.Button("Refresh");
-                refreshButton.LocalPressed += (a, b) => OnValuesChanged(true);
+                _removeNewButton = UI.Button("Remove new MeshRenderers");
+                _removeNewButton.LocalPressed += (a, b) => OnValuesChanged(false, true);
+                _removeNewButton.Enabled = false;
+
+                _refreshButton = UI.Button("Refresh");
+                _refreshButton.LocalPressed += (a, b) => OnValuesChanged(true);
+                _refreshButton.Enabled = false;
+
                 _confirmButton = UI.Button("Install");
                 _confirmButton.LocalPressed += OnInstallButtonPressed;
+                _confirmButton.Enabled = false;
 
                 UI.Spacer(12f);
 
@@ -299,7 +306,6 @@ namespace Restonite
 
         #region Private Fields
 
-        private readonly Checkbox _advancedMode;
         private readonly Slot _advancedModeSlot;
         private readonly Avatar _avatar;
         private readonly ReferenceField<Slot> _avatarRoot;
@@ -317,7 +323,7 @@ namespace Restonite
         private readonly ReferenceField<Slot> _statueSystemFallback;
         private readonly ValueField<int> _statueType;
         private readonly Slot _wizardSlot;
-        private readonly string _helpText = @"This mod installs and updates the Remaster system on an avatar.
+        private readonly string _helpText = @"This mod installs and updates the Statue Remaster system on an avatar.
 
 Advanced Mode:
 Advanced mode allows more fine grained control of what materials and options to use where.
@@ -337,18 +343,23 @@ Normally the mod will merge the statue materials with your normal avatar materia
 Default transition type:
 The transition type to use for when the avatar is turned into a statue. AlphaCutout requires special alpha textures. PlaneSlicer and RadialSlicer require PBS_Metallic or PBS_Specular materials. This can be changed per material slot using Advanced Mode.
 
+Remove new MeshRenderers:
+Removes all MeshRenderers from installation that have not previously been setup by the mod. Useful when tweaking settings on an already set up avatar.
+
 Refresh:
-Use this button to read the avatar root again and refresh the MeshRenderers. Any individual changes made in Advanced Mode will be lost.
+Reads the avatar root again and refreshes the MeshRenderers. Any individual changes made in Advanced Mode will be lost.
 
 Install:
-Performs a fresh install of the remaster system on the avatar.
+Performs a fresh install of the Remaster system on the avatar.
 
 Update:
-Updates the installation of the remaster system on the avatar with new materials, meshes and installation options.
+Updates the installation of the Remaster system on the avatar with new materials, meshes and installation options.
 
 Update from legacy:
-Updates the legacy installation to a remaster installation on the avatar.";
+Updates the legacy installation to a Remaster installation on the avatar.";
+        private readonly Button _removeNewButton;
         private bool _refreshingList;
+        private readonly Button _refreshButton;
 
         #endregion
 
@@ -361,6 +372,7 @@ Updates the legacy installation to a remaster installation on the avatar.";
             {
                 var result = _installSystemOnAvatar(scratchSpace, _statueSystemFallback.Reference, _installSlot.Reference, _contextMenuSlot.Reference);
                 HighlightHelper.FlashHighlight(_avatarRoot.Reference.Target, (_a) => true, result ? new colorX(0.5f, 0.5f, 0.5f, 1.0f) : new colorX(1.0f, 0.0f, 0.0f, 1.0f));
+                _confirmButton.Enabled = false;
             }
             catch (Exception ex)
             {
@@ -375,7 +387,7 @@ Updates the legacy installation to a remaster installation on the avatar.";
             }
         }
 
-        private void OnValuesChanged(bool readAvatar)
+        private void OnValuesChanged(bool readAvatar, bool removeNew = false)
         {
             try
             {
@@ -383,6 +395,9 @@ Updates the legacy installation to a remaster installation on the avatar.";
                     _avatar.ReadAvatarRoot(_avatarRoot.Reference.Target, _baseStatueMaterial.Reference.Target, _skinnedMeshRenderersOnly.State.Value, _defaultMaterialAsIs.State.Value, (StatueType)_statueType.Value.Value);
                 else
                     _avatar.UpdateParameters(_baseStatueMaterial.Reference.Target, _defaultMaterialAsIs.State.Value, (StatueType)_statueType.Value.Value);
+
+                if (removeNew)
+                    _avatar.RemoveUnmatchedMeshRenderers();
 
                 RefreshUI();
             }
@@ -588,11 +603,23 @@ Updates the legacy installation to a remaster installation on the avatar.";
                 }
 
                 if (_avatar.HasExistingSystem)
+                {
                     _confirmButton.LabelText = "Update";
+                    _removeNewButton.Enabled = true;
+                }
                 else if (_avatar.HasLegacySystem)
+                {
                     _confirmButton.LabelText = "Update from legacy";
+                    _removeNewButton.Enabled = true;
+                }
                 else
+                {
                     _confirmButton.LabelText = "Install";
+                    _removeNewButton.Enabled = false;
+                }
+
+                _refreshButton.Enabled = true;
+                _confirmButton.Enabled = true;
             }
             catch (Exception ex)
             {
