@@ -1256,6 +1256,24 @@ namespace Restonite
             return false;
         }
 
+        private bool IsDrivenByKnownStatueDriver(Sync<bool> field)
+        {
+            if (field.IsDriven && field.IsLinked && field.ActiveLink is SyncElement element)
+            {
+                if (element.Slot.Name == "Avatar/Statue.BodyStatue" || element.Slot.Name == "Body Statue Active")
+                    return true;
+
+                var dynVar = element.Slot.GetComponent<DynamicValueVariableDriver<bool>>(x => x.VariableName == "Avatar/Statue.BodyStatue");
+                if (dynVar != null)
+                    return true;
+
+                if (element.Component is ValueMultiDriver<bool> multiDriver)
+                    return IsDrivenByKnownStatueDriver(multiDriver.Value);
+            }
+
+            return false;
+        }
+
         private bool IsHierarchyEnabled(Slot slot)
         {
             var hierarchy = new List<Slot>();
@@ -1279,31 +1297,19 @@ namespace Restonite
                     return true;
             }
 
-            // Check if Enabled is driven by existing system
-            if (renderer.EnabledField.IsDriven && renderer.EnabledField.IsLinked)
+            var fields = new List<Sync<bool>>
             {
-                var element = renderer.EnabledField.ActiveLink as SyncElement;
-                if (element.Slot.Name == "Avatar/Statue.BodyStatue" || element.Slot.Name == "Body Statue Active")
-                    return true;
+                renderer.EnabledField
+            };
+
+            var slot = renderer.Slot;
+            while (slot != AvatarRoot)
+            {
+                fields.Add(slot.ActiveSelf_Field);
+                slot = slot.Parent;
             }
 
-            // Check if Slot is driven by existing system
-            if (renderer.Slot.ActiveSelf_Field.IsDriven && renderer.Slot.ActiveSelf_Field.IsLinked)
-            {
-                var element = renderer.Slot.ActiveSelf_Field.ActiveLink as SyncElement;
-                if (element.Slot.Name == "Avatar/Statue.BodyStatue" || element.Slot.Name == "Body Statue Active")
-                    return true;
-            }
-
-            // Check if Slot's parent is driven by existing system
-            if (renderer.Slot.Parent.ActiveSelf_Field.IsDriven && renderer.Slot.Parent.ActiveSelf_Field.IsLinked)
-            {
-                var element = renderer.Slot.Parent.ActiveSelf_Field.ActiveLink as SyncElement;
-                if (element.Slot.Name == "Avatar/Statue.BodyStatue" || element.Slot.Name == "Body Statue Active")
-                    return true;
-            }
-
-            return false;
+            return fields.Exists(x => IsDrivenByKnownStatueDriver(x));
         }
 
         private void UpdateMeshRenderer(MeshRendererMap rendererMap, Slot statueSlot, MeshRenderer statue)
