@@ -733,23 +733,27 @@ namespace Restonite
                 }
             }
 
-            var oldDefaults = _defaults.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
+            var updateSlot = systemSlot.GetChildrenWithTag("StatueUserConfig").FirstOrDefault();
 
-            // Update user config slot
-            if (_userConfig == null)
+            if (updateSlot != null)
             {
-                var updateSlot = systemSlot.GetChildrenWithTag("StatueUserConfig").FirstOrDefault();
+                var oldDefaults = _defaults.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new DynVarSlot(((Component)x).Slot, x));
 
-                if (updateSlot != null)
+                List<DynVarSlot> GetAvatarDynVarSlots(Slot slot) => slot
+                        .GetComponentsInChildren<IDynamicVariable>(filter: x => x.VariableName.StartsWith("Avatar/"), slotFilter: x => x == slot || x.Parent == slot)
+                        .ConvertAll(x => new DynVarSlot(((Component)x).Slot, x));
+
+                // Update user config slot
+                if (_userConfig == null)
                 {
                     Log.Info($"Adding {updateSlot.ToShortString()} with tag {updateSlot.Tag}");
 
                     updateSlot.SetParent(StatueRoot, false);
-                    _userConfig = updateSlot;
+                    _userConfig = StatueRoot.GetChildrenWithTag("StatueUserConfig")[0];
 
-                    var dynVars = _userConfig
-                        .GetComponentsInChildren<IDynamicVariable>(filter: x => x.VariableName.StartsWith("Avatar/"))
-                        .ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
+                    var dynVars = GetAvatarDynVarSlots(_userConfig);
+
+                    Log.Info($"Found {dynVars.Count} configs on {_userConfig.ToShortString()}");
 
                     // Update existing user config slots
                     var updateDynVars = oldDefaults.Join(dynVars,
@@ -780,40 +784,29 @@ namespace Restonite
                             Log.Warn($"User config slot for {dynVar.Defaults.DynamicVariable.VariableName} have differing data types, skipping");
                         }
                     }
-
-                    _defaults?.Destroy();
-                    _defaults = null;
                 }
-            }
-            else
-            {
-                var existingDynVars = _userConfig
-                    .GetComponentsInChildren<IDynamicVariable>(filter: x => x.VariableName.StartsWith("Avatar/"))
-                    .ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
-
-                existingDynVars.AddRange(oldDefaults);
-
-                var updateSlot = systemSlot.GetChildrenWithTag("StatueUserConfig").FirstOrDefault();
-
-                if (updateSlot != null)
+                else
                 {
-                    Log.Info($"Updating {updateSlot.ToShortString()} with tag {updateSlot.Tag}");
+                    Log.Info($"Updating {_userConfig.ToShortString()} from {updateSlot.ToShortString()} with tag {updateSlot.Tag}");
 
-                    var dynVars = updateSlot
-                        .GetComponentsInChildren<IDynamicVariable>(filter: x => x.VariableName.StartsWith("Avatar/"))
-                        .ConvertAll(x => new { Slot = ((Component)x).Slot, DynamicVariable = x });
+                    var avatarDynVars = GetAvatarDynVarSlots(_userConfig);
+                    var systemDynVars = GetAvatarDynVarSlots(updateSlot);
+
+                    Log.Info($"Found {avatarDynVars.Count} configs on avatar and {systemDynVars.Count} configs on system");
+
+                    avatarDynVars.AddRange(oldDefaults);
 
                     // Clean up old user config slots no longer present in the system
-                    var oldDynVars = existingDynVars.Where(x => !dynVars.Exists(y => y.DynamicVariable.VariableName == x.DynamicVariable.VariableName)).ToList();
+                    var oldDynVars = avatarDynVars.Where(x => !systemDynVars.Exists(y => y.DynamicVariable.VariableName == x.DynamicVariable.VariableName)).ToList();
                     foreach (var dynVar in oldDynVars)
                     {
                         Log.Info($"Removing old user config slot for {dynVar.DynamicVariable.VariableName}");
                         dynVar.Slot.Destroy();
-                        existingDynVars.Remove(dynVar);
+                        avatarDynVars.Remove(dynVar);
                     }
 
                     // Add new user config slots present in the system
-                    var newDynVars = dynVars.Where(x => !existingDynVars.Exists(y => y.DynamicVariable.VariableName == x.DynamicVariable.VariableName)).ToList();
+                    var newDynVars = systemDynVars.Where(x => !avatarDynVars.Exists(y => y.DynamicVariable.VariableName == x.DynamicVariable.VariableName)).ToList();
                     foreach (var dynVar in newDynVars)
                     {
                         Log.Info($"Adding new user config slot for {dynVar.DynamicVariable.VariableName}");
@@ -821,7 +814,7 @@ namespace Restonite
                     }
 
                     // Update existing user config slots
-                    var updateDynVars = existingDynVars.Join(dynVars,
+                    var updateDynVars = avatarDynVars.Join(systemDynVars,
                         existing => existing.DynamicVariable.VariableName,
                         system => system.DynamicVariable.VariableName,
                         (existing, system) => new { Existing = existing, System = system }).ToList();
@@ -842,31 +835,87 @@ namespace Restonite
                             dynVar.System.Slot.SetParent(_userConfig, false);
                         }
                     }
-
-                    _defaults?.Destroy();
-                    _defaults = null;
-                }
-            }
-
-            // Set default configs if null
-            if (_userConfig != null)
-            {
-                var avatarRoot = _userConfig.GetComponentInChildren<DynamicReferenceVariable<Slot>>(x => x.VariableName == "Avatar/Statue.AvatarRoot");
-                if (avatarRoot != null && avatarRoot.Reference.Target == null)
-                {
-                    avatarRoot.Reference.Target = AvatarRoot;
-                    Log.Info("Setting user config Avatar/Statue.AvatarRoot to avatar root slot");
                 }
 
-                var soundEffectDefault = _userConfig.GetComponentInChildren<DynamicReferenceVariable<IAssetProvider<AudioClip>>>(x => x.VariableName == "Avatar/Statue.SoundEffect.Default");
-                if (soundEffectDefault != null)
+                _defaults?.Destroy();
+                _defaults = null;
+
+                // Set default configs if null
+                if (_userConfig != null)
                 {
-                    var audioClip = soundEffectDefault.Slot.GetComponent<StaticAudioClip>();
-                    if (audioClip != null && soundEffectDefault.Reference.Target == null)
+                    var oldSlots = _userConfig.GetAllChildren().Where(x => x.Parent == _userConfig).ToList();
+                    var newSlots = updateSlot.GetAllChildren().Where(x => x.Parent == updateSlot).ToList();
+
+                    var toAdd = newSlots.Where(x => !oldSlots.Exists(y => y.Name == x.Name)).ToList();
+
+                    foreach (var slot in toAdd)
                     {
-                        soundEffectDefault.Reference.Target = audioClip;
-                        Log.Info("Setting user config Avatar/Statue.SoundEffect.Default to default audio clip");
+                        slot.SetParent(_userConfig, false);
+                        Log.Info($"Adding {slot.ToShortString()} to {_userConfig.ToShortString()}");
                     }
+
+                    AvatarRoot.RunInUpdates(3, () =>
+                    {
+                        Log.Info($"Updating user config values in {_userConfig.ToShortString()}");
+
+                        var avatarRoot = _userConfig.GetComponentInChildren<DynamicReferenceVariable<Slot>>(x => x.VariableName == "Avatar/Statue.AvatarRoot");
+                        if (avatarRoot != null && avatarRoot.Reference.Target == null)
+                        {
+                            avatarRoot.Reference.Target = AvatarRoot;
+                            Log.Info($"Setting user config {avatarRoot.Slot.ToShortString()} to {AvatarRoot.ToShortString()}");
+                        }
+
+                        var soundEffectDefault = _userConfig.GetComponentInChildren<DynamicReferenceVariable<IAssetProvider<AudioClip>>>(x => x.VariableName == "Avatar/Statue.SoundEffect.Default");
+                        if (soundEffectDefault != null)
+                        {
+                            var audioClip = soundEffectDefault.Slot.GetComponent<StaticAudioClip>();
+                            if (audioClip == null)
+                                Log.Warn($"Couldn't find audio clip in {soundEffectDefault.ToShortString()}");
+
+                            if (audioClip != null && soundEffectDefault.Reference.Target == null)
+                            {
+                                soundEffectDefault.Reference.Target = audioClip;
+                                Log.Info($"Setting user config {soundEffectDefault.Slot.ToShortString()} to {audioClip.ToShortString()}");
+                            }
+                        }
+
+                        var slicerRefScale = _userConfig.GetComponentInChildren<DynamicValueVariable<float3>>(x => x.VariableName == "Avatar/Statue.Slicer.RefScale");
+                        if (slicerRefScale != null)
+                        {
+                            slicerRefScale.Value.Value = AvatarRoot.GlobalScale;
+                            Log.Info($"Setting user config {slicerRefScale.Slot.ToShortString()} to {AvatarRoot.GlobalScale}");
+                        }
+
+                        var transitionTypes = MeshRenderers.SelectMany(x => x.MaterialSets).SelectMany(x => x).Select(x => x.TransitionType).Distinct().ToList();
+
+                        var enableAlphaFade = _userConfig.GetComponentInChildren<DynamicValueVariable<bool>>(x => x.VariableName == "Avatar/Statue.Material.EnableAlphaFade");
+                        if (enableAlphaFade != null)
+                        {
+                            enableAlphaFade.Value.Value = transitionTypes.Contains(StatueType.AlphaFade);
+                            Log.Info($"Setting user config {enableAlphaFade.Slot.ToShortString()} to {enableAlphaFade.Value.Value}");
+                        }
+
+                        var enableAlphaCutout = _userConfig.GetComponentInChildren<DynamicValueVariable<bool>>(x => x.VariableName == "Avatar/Statue.Material.EnableAlphaCutout");
+                        if (enableAlphaCutout != null)
+                        {
+                            enableAlphaCutout.Value.Value = transitionTypes.Contains(StatueType.AlphaCutout);
+                            Log.Info($"Setting user config {enableAlphaCutout.Slot.ToShortString()} to {enableAlphaCutout.Value.Value}");
+                        }
+
+                        var enablePlanarSlice = _userConfig.GetComponentInChildren<DynamicValueVariable<bool>>(x => x.VariableName == "Avatar/Statue.Material.EnablePlanarSlice");
+                        if (enablePlanarSlice != null)
+                        {
+                            enablePlanarSlice.Value.Value = transitionTypes.Contains(StatueType.PlaneSlicer);
+                            Log.Info($"Setting user config {enablePlanarSlice.Slot.ToShortString()} to {enablePlanarSlice.Value.Value}");
+                        }
+
+                        var enableRadialSlicer = _userConfig.GetComponentInChildren<DynamicValueVariable<bool>>(x => x.VariableName == "Avatar/Statue.Material.EnableRadialSlicer");
+                        if (enableRadialSlicer != null)
+                        {
+                            enableRadialSlicer.Value.Value = transitionTypes.Contains(StatueType.RadialSlicer);
+                            Log.Info($"Setting user config {enableRadialSlicer.Slot.ToShortString()} to {enableRadialSlicer.Value.Value}");
+                        }
+                    });
                 }
             }
         }
