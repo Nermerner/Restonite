@@ -53,8 +53,6 @@ namespace Restonite
             private readonly WizardUi _ui;
             private readonly Avatar _avatar;
 
-            private readonly CloudValueVariable<string> _uriVariable;
-
             public static StatueSystemWizard GetOrCreateWizard(Slot x)
             {
                 return new StatueSystemWizard(x);
@@ -62,15 +60,6 @@ namespace Restonite
 
             private StatueSystemWizard(Slot x)
             {
-                // Initialize cloud spawn
-                var statueSystemLoadSlot = x.AddSlot("Statue System Loader");
-                var statueSystemCloudURIVariable = statueSystemLoadSlot.AttachComponent<CloudValueVariable<string>>();
-                statueSystemCloudURIVariable.Path.Value = "U-Azavit.Statue.Stable.AssetURI";
-                statueSystemCloudURIVariable.VariableOwnerId.Value = "U-Azavit";
-                statueSystemCloudURIVariable.ChangeHandling.Value = CloudVariableChangeMode.Ignore;
-                statueSystemCloudURIVariable.IsLinkedToCloud.Value = true;
-                _uriVariable = statueSystemCloudURIVariable;
-
                 // Init editor
                 _wizardSlot = x;
                 _wizardSlot.Tag = "Developer";
@@ -84,7 +73,7 @@ namespace Restonite
                 Log.Setup(_ui, Debug, Msg, Warn, Error);
             }
 
-            public bool InstallSystemOnAvatar(Slot scratchSpace, SyncRef<Slot> statueSystemFallback, SyncRef<Slot> installSlot, SyncRef<Slot> contextMenuSlot)
+            public bool InstallSystemOnAvatar(Slot scratchSpace, Slot statueSystem, SyncRef<Slot> installSlot, SyncRef<Slot> contextMenuSlot)
             {
                 Log.Info($"=== Starting install for avatar {_avatar.AvatarRoot.ToShortString()}");
 
@@ -98,12 +87,8 @@ namespace Restonite
                 _avatar.SetupRootDynVar();
 
                 // Add statue system objects
-                var systemSlot = GetStatueSystem(scratchSpace, _uriVariable, statueSystemFallback);
-                if(systemSlot == null)
-                    return false;
-
                 _avatar.RemoveLegacySystem();
-                _avatar.InstallRemasterSystem(systemSlot, contextMenuSlot);
+                _avatar.InstallRemasterSystem(statueSystem, contextMenuSlot);
 
                 if (!_avatar.DuplicateMeshes())
                     return false;
@@ -131,61 +116,6 @@ namespace Restonite
                 _avatar.OpenUserConfigInspector();
 
                 return true;
-            }
-
-            public Slot SpawnSlot(Slot x, string file, World world, float3 position, float3 scale)
-            {
-                DataTreeDictionary loadNode = DataTreeConverter.Load(file);
-
-                Slot slot = x.AddSlot("SpawnSlotObject");
-                slot.CreateSpawnUndoPoint();
-                slot.LoadObject(loadNode);
-                slot.GlobalPosition = position;
-                slot.GlobalScale = scale;
-
-                return slot.Children.First();
-            }
-
-            public Slot GetStatueSystem(Slot scratchSpace, CloudValueVariable<string> uriVariable, SyncRef<Slot> fallback)
-            {
-                if (fallback.Value != RefID.Null)
-                {
-                    Log.Info("Using statue system override from RefID " + fallback.Value);
-
-                    return fallback.Target.Duplicate(scratchSpace);
-                }
-                else
-                {
-                    Log.Info("Getting statue system from cloud");
-                    // Yoinked from FrooxEngine.FileMetadata.OnImportFile
-                    var fileName = uriVariable.Value.Value;
-                    var fileUri = new Uri(fileName);
-
-                    var record = scratchSpace.Engine.RecordManager.FetchRecord(fileUri).GetAwaiter().GetResult();
-
-                    Log.Debug($"Got record for {record.Entity.Name}");
-                    Log.Debug($"Fetching from {record.Entity.AssetURI}");
-
-                    string fileData = scratchSpace.Engine.AssetManager.GatherAssetFile(new Uri(record.Entity.AssetURI), 100.0f).GetAwaiter().GetResult();
-
-                    Msg(fileUri);
-                    Msg(fileData);
-
-                    if (fileData != null)
-                    {
-                        scratchSpace.LocalUser.GetPointInFrontOfUser(out var point, out var rotation, float3.Backward);
-
-                        Log.Info("Got file successfully");
-
-                        return SpawnSlot(scratchSpace, fileData, scratchSpace.World, point, new float3(1.0f, 1.0f, 1.0f));
-                    }
-                    else
-                    {
-                        Log.Error("ERROR: File was null after RequestGather");
-
-                        return scratchSpace.AddSlot("File was null after RequestGather");
-                    }
-                }
             }
         }
 

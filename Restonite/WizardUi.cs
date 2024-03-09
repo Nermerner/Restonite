@@ -11,13 +11,22 @@ namespace Restonite
     {
         #region Public Constructors
 
-        public WizardUi(Slot slot, string title, Avatar avatarReader, Func<Slot, SyncRef<Slot>, SyncRef<Slot>, SyncRef<Slot>, bool> onInstall)
+        public WizardUi(Slot slot, string title, Avatar avatarReader, Func<Slot, Slot, SyncRef<Slot>, SyncRef<Slot>, bool> onInstall)
         {
             try
             {
                 _wizardSlot = slot;
                 _avatar = avatarReader;
                 _installSystemOnAvatar = onInstall;
+
+                // Initialize cloud spawn
+                var statueSystemLoadSlot = slot.AddSlot("Statue System Loader");
+                var statueSystemCloudURIVariable = statueSystemLoadSlot.AttachComponent<CloudValueVariable<string>>();
+                statueSystemCloudURIVariable.Path.Value = "U-Azavit.Statue.Stable.AssetURI";
+                statueSystemCloudURIVariable.VariableOwnerId.Value = "U-Azavit";
+                statueSystemCloudURIVariable.ChangeHandling.Value = CloudVariableChangeMode.Ignore;
+                statueSystemCloudURIVariable.IsLinkedToCloud.Value = true;
+                _uriVariable = statueSystemCloudURIVariable;
 
                 Slot Data = _wizardSlot.AddSlot("Data");
 
@@ -268,7 +277,7 @@ namespace Restonite
 
         public void ClearLog()
         {
-            if(_debugText != null)
+            if (_debugText != null)
                 _debugText.Content.Value = string.Empty;
         }
 
@@ -315,14 +324,7 @@ namespace Restonite
         private readonly Text _debugText;
         private readonly Checkbox _defaultMaterialAsIs;
         private readonly ReferenceMultiplexer<MeshRenderer> _foundMeshRenderers;
-        private readonly ReferenceField<Slot> _installSlot;
-        private readonly Func<Slot, SyncRef<Slot>, SyncRef<Slot>, SyncRef<Slot>, bool> _installSystemOnAvatar;
-        private readonly Slot _listPanel;
-        private readonly Slot _simpleModeSlot;
-        private readonly Checkbox _skinnedMeshRenderersOnly;
-        private readonly ReferenceField<Slot> _statueSystemFallback;
-        private readonly ValueField<int> _statueType;
-        private readonly Slot _wizardSlot;
+
         private readonly string _helpText = @"This mod installs and updates the Statue Remaster system on an avatar.
 
 Advanced Mode:
@@ -357,9 +359,19 @@ Updates the installation of the Remaster system on the avatar with new materials
 
 Update from legacy:
 Updates the legacy installation to a Remaster installation on the avatar.";
-        private readonly Button _removeNewButton;
-        private bool _refreshingList;
+
+        private readonly ReferenceField<Slot> _installSlot;
+        private readonly Func<Slot, Slot, SyncRef<Slot>, SyncRef<Slot>, bool> _installSystemOnAvatar;
+        private readonly Slot _listPanel;
         private readonly Button _refreshButton;
+        private readonly Button _removeNewButton;
+        private readonly Slot _simpleModeSlot;
+        private readonly Checkbox _skinnedMeshRenderersOnly;
+        private readonly ReferenceField<Slot> _statueSystemFallback;
+        private readonly ValueField<int> _statueType;
+        private readonly CloudValueVariable<string> _uriVariable;
+        private readonly Slot _wizardSlot;
+        private bool _refreshingList;
 
         #endregion
 
@@ -370,7 +382,12 @@ Updates the legacy installation to a Remaster installation on the avatar.";
             var scratchSpace = _wizardSlot.AddSlot("Scratch space");
             try
             {
-                var result = _installSystemOnAvatar(scratchSpace, _statueSystemFallback.Reference, _installSlot.Reference, _contextMenuSlot.Reference);
+                var systemSlot = CloudSpawn.GetStatueSystem(scratchSpace, _uriVariable, _statueSystemFallback.Reference);
+                if (systemSlot == null)
+                    return;
+
+                var result = _installSystemOnAvatar(scratchSpace, systemSlot, _installSlot.Reference, _contextMenuSlot.Reference);
+
                 HighlightHelper.FlashHighlight(_avatarRoot.Reference.Target, (_a) => true, result ? new colorX(0.5f, 0.5f, 0.5f, 1.0f) : new colorX(1.0f, 0.0f, 0.0f, 1.0f));
                 _confirmButton.Enabled = false;
             }
