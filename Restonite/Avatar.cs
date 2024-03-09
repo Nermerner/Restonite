@@ -48,6 +48,32 @@ namespace Restonite
                     ChangeMaterialReferences(material.Statue, newMaterial);
                 }
             }
+
+            _originalNormalMaterials.DestroyChildren();
+            _originalStatueMaterials.DestroyChildren();
+
+            // Generate original material lists
+            var normalList = new List<RefID>();
+            var statueList = new List<RefID>();
+
+            foreach (var material in MeshRenderers.SelectMany(x => x.MaterialSets).SelectMany(x => x))
+            {
+                if(material.Normal != null && !normalList.Contains(material.Normal.ReferenceID))
+                {
+                    var slot = _originalNormalMaterials.AddSlot($"Normal {normalList.Count}");
+                    var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Normal, slot);
+                    ChangeMaterialReferences(material.Normal, newMaterial);
+                    normalList.Add(material.Normal.ReferenceID);
+                }
+
+                if (material.Statue != null && !statueList.Contains(material.Statue.ReferenceID))
+                {
+                    var slot = _originalStatueMaterials.AddSlot($"Statue {statueList.Count}");
+                    var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Statue, slot);
+                    ChangeMaterialReferences(material.Statue, newMaterial);
+                    statueList.Add(material.Statue.ReferenceID);
+                }
+            }
         }
 
         public void CopyBlendshapes()
@@ -339,6 +365,10 @@ namespace Restonite
             _meshes = _drivers.FindChildOrAdd("Meshes");
             _blendshapes = _drivers.FindChildOrAdd("Blend Shapes");
 
+            _originalMaterials = StatueRoot.FindChildOrAdd("Original Materials");
+            _originalStatueMaterials = _originalMaterials.FindChildOrAdd("Statue Materials");
+            _originalNormalMaterials = _originalMaterials.FindChildOrAdd("Normal Materials");
+
             _generatedMaterials = StatueRoot.FindChildOrAdd("Generated Materials");
             _statueMaterials = _generatedMaterials.FindChildOrAdd("Statue Materials");
             _normalMaterials = _generatedMaterials.FindChildOrAdd("Normal Materials");
@@ -512,6 +542,11 @@ namespace Restonite
                             typeDynVar.VariableName.Value = $"Avatar/Statue.TransitionType{oldMaterialToNewNormalMaterialMap.Count}";
                             typeDynVar.Value.Value = $"{statueType}";
 
+                            // Add dynvar with information about the original material
+                            var originalDynVar = newSlot.AttachComponent<DynamicReferenceVariable<Slot>>();
+                            originalDynVar.VariableName.Value = $"Avatar/Statue.OriginalNormalMaterial{oldMaterialToNewNormalMaterialMap.Count}";
+                            originalDynVar.Reference.Target = oldMaterial.Slot;
+
                             oldMaterialToNewNormalMaterialMap[key] = newMaterial;
                         }
 
@@ -616,6 +651,19 @@ namespace Restonite
                             // Drive that dynvar
                             multiDriver.Drives.Add();
                             multiDriver.Drives[0].ForceLink(dynMaterialVariable.Reference);
+
+                            // Add dynvar with information about the original material
+                            var originalDynVar = newMaterialHolder.AttachComponent<DynamicReferenceVariable<Slot>>();
+                            originalDynVar.VariableName.Value = $"Avatar/Statue.OriginalStatueMaterial{oldMaterialToStatueMaterialMap.Count}";
+                            originalDynVar.Reference.Target = statueMaterial.Slot;
+
+                            if (!defaultMaterialAsIs)
+                            {
+                                // Add dynvar with information about the original material it was based on
+                                var basedOnDynVar = newMaterialHolder.AttachComponent<DynamicReferenceVariable<Slot>>();
+                                basedOnDynVar.VariableName.Value = $"Avatar/Statue.BasedOnNormalMaterial{oldMaterialToStatueMaterialMap.Count}";
+                                basedOnDynVar.Reference.Target = normalMaterial.Slot;
+                            }
 
                             oldMaterialToStatueMaterialMap.Add(key, multiDriver);
                         }
@@ -1111,6 +1159,9 @@ namespace Restonite
         private Slot _legacyAddons;
         private Slot _legacySystem;
         private Slot _meshes;
+        private Slot _originalMaterials;
+        private Slot _originalNormalMaterials;
+        private Slot _originalStatueMaterials;
         private Slot _normalMaterials;
         private Slot _scratchSpace;
         private bool _skinnedMeshRenderersOnly;
