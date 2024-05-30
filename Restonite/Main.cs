@@ -29,7 +29,7 @@ namespace Restonite
 
         public override string Name => "Restonite";
         public override string Author => "Nermerner, Uruloke";
-        public override string Version => "1.3.1";
+        public override string Version => "1.3.2";
         public override string Link => "https://github.com/Nermerner/Restonite";
 
         public override void OnEngineInit()
