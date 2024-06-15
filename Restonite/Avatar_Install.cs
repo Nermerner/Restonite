@@ -324,7 +324,8 @@ internal partial class Avatar
                         else if ((material.TransitionType == StatueType.AlphaFade || material.TransitionType == StatueType.AlphaCutout)
                             && !(material.Normal is PBS_DualSidedMetallic) && !(material.Normal is PBS_DualSidedSpecular)
                             && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular)
-                            && !(material.Normal is XiexeToonMaterial) && !(material.Normal is PBS_DistanceLerpMaterial))
+                            && !(material.Normal is XiexeToonMaterial) && !(material.Normal is PBS_DistanceLerpMaterial)
+                            && !(material.Normal is UnlitMaterial))
                         {
                             Log.Error($"{material.Normal.GetType().Name} does not support {material.TransitionType}, aborting");
                             return false;

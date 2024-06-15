@@ -22,7 +22,9 @@ namespace Restonite
         }
 
         #region MaterialSetup
+
         #region AlphaFadeSetup
+
         private static void SetupAlphaFadePBSMaterial(IPBS_Material oldMaterial, PBS_Material newMaterial, Slot destination)
         {
             FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
@@ -156,8 +158,67 @@ namespace Restonite
 
             newMaterial.OffsetFactor.Value = -0.1f;
         }
+
+        private static void SetupAlphaFadeUnlitMaterial(UnlitMaterial oldMaterial, UnlitMaterial newMaterial, Slot destination)
+        {
+            FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
+
+            var bodyNormalPersistMultiDriver = destination.AttachComponent<ValueMultiDriver<bool>>();
+            var bodyNormalPersistDriver = destination.AttachComponent<DynamicValueVariableDriver<bool>>();
+            bodyNormalPersistDriver.VariableName.Value = "Avatar/Statue.BodyNormal.Persist";
+            bodyNormalPersistDriver.Target.ForceLink(bodyNormalPersistMultiDriver.Value);
+
+            // Save original albedo
+            var multiplierGradientDriver = destination.AttachComponent<ValueGradientDriver<colorX>>();
+            multiplierGradientDriver.Points.Add().Value.Value = newMaterial.TintColor.Value;
+            multiplierGradientDriver.Points.Add().Value.Value = newMaterial.TintColor.Value * new colorX(1.0f, 1.0f, 1.0f, 0.0f);
+            multiplierGradientDriver.Points.Last().Position.Value = 1.0f;
+
+            // Drive gradient driver's progress
+            var alphaDriver = destination.AttachComponent<DynamicValueVariableDriver<float>>();
+            alphaDriver.VariableName.Value = "Avatar/Statue.Material.Progress";
+            alphaDriver.Target.ForceLink(multiplierGradientDriver.Progress);
+
+            // Gate gradiant driver through BodyNormal.Persist
+            var bodyNormalPersistGate = destination.AttachComponent<BooleanValueDriver<colorX>>();
+            bodyNormalPersistGate.TargetField.ForceLink(newMaterial.TintColor);
+            bodyNormalPersistGate.TrueValue.Value = newMaterial.TintColor.Value;
+            multiplierGradientDriver.Target.ForceLink(bodyNormalPersistGate.FalseValue);
+            bodyNormalPersistMultiDriver.Drives.Add().ForceLink(bodyNormalPersistGate.State);
+
+            // Drive blendmode of material
+            var blendModeDriver = destination.AttachComponent<DynamicValueVariableDriver<BlendMode>>();
+            blendModeDriver.VariableName.Value = "Avatar/Statue.BlendMode";
+            var blendModeActiveDriver = destination.AttachComponent<DynamicValueVariableDriver<bool>>();
+            blendModeActiveDriver.VariableName.Value = "Avatar/Statue.BodyNormal.GreaterThan0";
+            var blendModeBoolDriver = destination.AttachComponent<BooleanValueDriver<BlendMode>>();
+            blendModeBoolDriver.TargetField.ForceLink(newMaterial.BlendMode);
+
+            // Save original blend mode
+            blendModeBoolDriver.FalseValue.Value = oldMaterial.BlendMode;
+            blendModeDriver.Target.ForceLink(blendModeBoolDriver.TrueValue);
+
+            // Gate blendmode through BodyNormal.Persist
+            var bodyNormalPersist = destination.AttachComponent<ValueField<bool>>();
+            bodyNormalPersistMultiDriver.Drives.Add().ForceLink(bodyNormalPersist.Value);
+            var bodyNormalGreaterThan0 = destination.AttachComponent<ValueField<bool>>();
+            blendModeActiveDriver.Target.ForceLink(bodyNormalGreaterThan0.Value);
+
+            var bodyNormalConditionDriver = destination.AttachComponent<MultiBoolConditionDriver>();
+            var condition1 = bodyNormalConditionDriver.Conditions.Add();
+            condition1.Field.Value = bodyNormalPersist.Value.ReferenceID;
+            condition1.Invert.Value = true;
+            var condition2 = bodyNormalConditionDriver.Conditions.Add();
+            condition2.Field.Value = bodyNormalGreaterThan0.Value.ReferenceID;
+            bodyNormalConditionDriver.Target.ForceLink(blendModeBoolDriver.State);
+
+            newMaterial.OffsetFactor.Value = -0.1f;
+        }
+
         #endregion AlphaFadeSetup
+
         #region AlphaCutoutSetup
+
         private static void SetupAlphaCutoutPBSMaterial(IPBS_Material oldMaterial, PBS_Material newMaterial, Slot destination)
         {
             FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
@@ -276,8 +337,11 @@ namespace Restonite
 
             newMaterial.OffsetFactor.Value = -0.1f;
         }
+
         #endregion AlphaCutoutSetup
+
         #region SlicerPlaneSetup
+
         private static void SetupSlicerPlanePBSMaterial(IPBS_Material oldMaterial, PBS_Slice newMaterial, Slot destination)
         {
             FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
@@ -304,8 +368,11 @@ namespace Restonite
 
             newMaterial.OffsetFactor.Value = -0.1f;
         }
+
         #endregion SlicerPlaneSetup
+
         #region RadialDisplace
+
         private static void SetupRadialDisplacePBSMaterial(IPBS_Material oldMaterial, PBS_DistanceLerpMaterial newMaterial, Slot destination)
         {
             FrooxEngine.MaterialHelper.CopyMaterialProperties(oldMaterial, newMaterial);
@@ -346,7 +413,9 @@ namespace Restonite
 
             newMaterial.OffsetFactor.Value = -0.1f;
         }
+
         #endregion RadialDisplace
+
         #endregion MaterialSetup
 
         public static IAssetProvider<Material> CopyMaterialToSlot(IAssetProvider<Material> originalMaterial, Slot destination)
@@ -424,6 +493,13 @@ namespace Restonite
                                 SetupAlphaFadeXiexeMaterial(x, newMaterial, destination);
                                 return newMaterial;
                             }
+                        case UnlitMaterial x:
+                            {
+                                Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
+                                var newMaterial = destination.AttachComponent<UnlitMaterial>();
+                                SetupAlphaFadeUnlitMaterial(x, newMaterial, destination);
+                                return newMaterial;
+                            }
                     }
 
                     break;
@@ -496,6 +572,7 @@ namespace Restonite
                         }
                         break;
                     }
+
                 case StatueType.RadialSlicer:
                     {
                         switch (originalMaterial)
