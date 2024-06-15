@@ -1,0 +1,28 @@
+<Project>
+    <PropertyGroup>
+        <OutputType>Library</OutputType>
+        <TargetFramework>net462</TargetFramework>
+        <LangVersion>11.0</LangVersion>
+        <Nullable>enable</Nullable>
+        <Deterministic>true</Deterministic>
+        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+        <DebugType>portable</DebugType>
+        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+
+        <CopyToLibraries Condition="'$(CopyToLibraries)'==''">true</CopyToLibraries>
+
+        <RestoreAdditionalProjectSources>
+            https://nuget.pkg.github.com/MonkeyModdingTroop/index.json;
+            https://nuget.pkg.github.com/ResoniteModdingGroup/index.json
+        </RestoreAdditionalProjectSources>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(ResonitePath)'==''">
+        <ResonitePath>$(MSBuildThisFileDirectory)Resonite</ResonitePath>
+        <ResonitePath Condition="Exists('C:\Program Files (x86)\Steam\steamapps\common\Resonite\')">C:\Program Files (x86)\Steam\steamapps\common\Resonite</ResonitePath>
+        <ResonitePath Condition="Exists('$(HOME)/.steam/steam/steamapps/common/Resonite/')">$(HOME)/.steam/steam/steamapps/common/Resonite</ResonitePath>
+        <ResonitePath Condition="Exists('D:/Files/Games/Resonite/app/')">D:/Files/Games/Resonite/app</ResonitePath>
+        <ResonitePath Condition="Exists('C:\Spel\Steam\steamapps\common\Resonite\')">C:\Spel\Steam\steamapps\common\Resonite</ResonitePath>
+    </PropertyGroup>
+
+</Project>
