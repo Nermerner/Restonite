@@ -54,7 +54,7 @@ internal partial class Avatar
 
                     if (material.Normal != null && !normalList.Contains(material.Normal.ReferenceID))
                     {
-                        var slot = _originalNormalMaterials.AddSlot($"Normal {normalList.Count}");
+                        var slot = _originalNormalMaterials.AddSlot($"{meshRendererMap.NormalSlot.Name}.Set{materialSet}.Material{materialIndex}");
                         var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Normal, slot);
                         ChangeMaterialReferences(material.Normal, newMaterial);
                         normalList.Add(material.Normal.ReferenceID);
@@ -62,7 +62,7 @@ internal partial class Avatar
 
                     if (material.Statue != null && !statueList.Contains(material.Statue.ReferenceID))
                     {
-                        var slot = _originalStatueMaterials.AddSlot($"Statue {statueList.Count}");
+                        var slot = _originalStatueMaterials.AddSlot(meshRendererMap.StatueSlot == null ? $"Statue {statueList.Count}" :  $"{meshRendererMap.StatueSlot.Name}.Set{materialSet}.Material{materialIndex}");
                         var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Statue, slot);
                         ChangeMaterialReferences(material.Statue, newMaterial);
                         statueList.Add(material.Statue.ReferenceID);
@@ -105,7 +105,7 @@ internal partial class Avatar
                     {
                         Log.Info($"Creating normal material {oldMaterialToNewNormalMaterialMap.Count} for {oldMaterial.ToLongString()} using {statueType}");
 
-                        var newSlot = _normalMaterials.AddSlot($"Normal {oldMaterialToNewNormalMaterialMap.Count}");
+                        var newSlot = _normalMaterials.AddSlot($"{map.NormalSlot.Name}.Set{set}.Material{slot}");
 
                         // Create material based on transition type
                         var newMaterial = MaterialHelpers.CreateAlphaMaterial(oldMaterial, statueType, newSlot);
@@ -185,7 +185,7 @@ internal partial class Avatar
 
                         // Create a new statue material object (i.e. drives material slot on statue
                         // SMR, has default material with normal map)
-                        var newMaterialHolder = _statueMaterials.AddSlot($"Statue {oldMaterialToStatueMaterialMap.Count}");
+                        var newMaterialHolder = _statueMaterials.AddSlot(map.StatueSlot == null ? $"Statue {oldMaterialToStatueMaterialMap.Count}" : $"{map.StatueSlot.Name}.Set{set}.Material{slot}");
 
                         var newDefaultMaterialRefId = defaultMaterialAsIs
                             ? newMaterialHolder.CopyComponent((AssetProvider<Material>)statueMaterial).ReferenceID
