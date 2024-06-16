@@ -1,41 +1,19 @@
 ﻿using Elements.Core;
-using FrooxEngine.UIX;
 using FrooxEngine;
+using FrooxEngine.UIX;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static Elements.Assets.SegmentedBuilder;
 
 namespace Restonite
 {
     internal class StatueTypeEditor
     {
-        private Text _textDrive;
-        private Sync<int> _target;
-
-        private void DecrementEnum(IButton button, ButtonEventData eventData)
-        {
-            ShiftEnum(-1);
-        }
-
-        private void IncrementEnum(IButton button, ButtonEventData eventData)
-        {
-            ShiftEnum(1);
-        }
-
-        private void ShiftEnum(int delta)
-        {
-            _target.Value = (int)EnumUtil.ShiftEnum((IConvertible)(StatueType)_target.Value, delta);
-            _textDrive.Content.Value = $"{(StatueType)_target.Value}";
-        }
+        #region Public Methods
 
         public void Setup(Slot slot, Sync<int> field)
         {
             _target = field;
 
-            UIBuilder ui = new UIBuilder(slot);
+            var ui = new UIBuilder(slot);
             RadiantUI_Constants.SetupEditorStyle(ui);
 
             ui.HorizontalLayout(4f);
@@ -57,5 +35,36 @@ namespace Restonite
             increment.LocalPressed += IncrementEnum;
             ui.NestOut();
         }
+
+        #endregion
+
+        #region Private Fields
+
+        private Sync<int>? _target;
+        private Text? _textDrive;
+
+        #endregion
+
+        #region Private Methods
+
+        private void DecrementEnum(IButton button, ButtonEventData eventData)
+        {
+            ShiftEnum(-1);
+        }
+
+        private void IncrementEnum(IButton button, ButtonEventData eventData)
+        {
+            ShiftEnum(1);
+        }
+
+        private void ShiftEnum(int delta)
+        {
+            if (_target is null || _textDrive is null) return;
+
+            _target.Value = (int)EnumUtil.ShiftEnum((IConvertible)(StatueType)_target.Value, delta);
+            _textDrive.Content.Value = $"{(StatueType)_target.Value}";
+        }
+
+        #endregion
     }
 }

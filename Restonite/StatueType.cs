@@ -1,6 +1,6 @@
 ﻿namespace Restonite
 {
-    public enum StatueType : int
+    internal enum StatueType : int
     {
         AlphaFade,
         AlphaCutout,

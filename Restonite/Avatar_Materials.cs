@@ -1,7 +1,7 @@
-﻿using Elements.Core;
+using Elements.Core;
 using FrooxEngine;
-using FrooxEngine.UIX;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace Restonite;
@@ -12,6 +12,9 @@ internal partial class Avatar
 
     public void CollectMaterials()
     {
+        if (_scratchSpace is null || _originalNormalMaterials is null || _originalStatueMaterials is null)
+            return;
+
         Log.Info("=== Collecting avatar materials");
 
         var normalMaterials = _scratchSpace.AddSlot("Normal Materials");
@@ -20,7 +23,7 @@ internal partial class Avatar
         // Move all materials to scratch space slot temporarily
         foreach (var material in MeshRenderers.SelectMany(x => x.MaterialSets).SelectMany(x => x))
         {
-            if (material.Normal != null && material.Normal.Slot != normalMaterials)
+            if (material.Normal is not null && material.Normal.Slot != normalMaterials)
             {
                 Log.Debug($"Copying {material.Normal.ToLongString()} to {normalMaterials.ToShortString()}");
                 var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Normal, normalMaterials);
@@ -28,7 +31,7 @@ internal partial class Avatar
                 ChangeMaterialReferences(material.Normal, newMaterial);
             }
 
-            if (material.Statue != null && material.Statue.Slot != statueMaterials)
+            if (material.Statue is not null && material.Statue.Slot != statueMaterials)
             {
                 Log.Debug($"Copying {material.Statue.ToLongString()} to {statueMaterials.ToShortString()}");
                 var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Statue, statueMaterials);
@@ -52,7 +55,7 @@ internal partial class Avatar
                 {
                     var material = meshRendererMap.MaterialSets[materialSet][materialIndex];
 
-                    if (material.Normal != null && !normalList.Contains(material.Normal.ReferenceID))
+                    if (material.Normal is not null && !normalList.Contains(material.Normal.ReferenceID))
                     {
                         var slot = _originalNormalMaterials.AddSlot($"{meshRendererMap.NormalSlot.Name}.Set{materialSet}.Material{materialIndex}");
                         var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Normal, slot);
@@ -60,7 +63,7 @@ internal partial class Avatar
                         normalList.Add(material.Normal.ReferenceID);
                     }
 
-                    if (material.Statue != null && !statueList.Contains(material.Statue.ReferenceID))
+                    if (material.Statue is not null && !statueList.Contains(material.Statue.ReferenceID))
                     {
                         var slot = _originalStatueMaterials.AddSlot(meshRendererMap.StatueSlot == null ? $"Statue {statueList.Count}" :  $"{meshRendererMap.StatueSlot.Name}.Set{materialSet}.Material{materialIndex}");
                         var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Statue, slot);
@@ -74,32 +77,35 @@ internal partial class Avatar
 
     public void GenerateNormalMaterials()
     {
+        if (_normalMaterials is null)
+            return;
+
         Log.Info("=== Generating normal materials");
 
         // Destroy all existing children
         _normalMaterials.DestroyChildren();
 
         // Create alpha material and swap normal material for it
-        var oldMaterialToNewNormalMaterialMap = new Dictionary<string, IAssetProvider<Material>>();
+        var oldMaterialToNewNormalMaterialMap = new Dictionary<string, ReferenceMultiDriver<IAssetProvider<Material>>>();
         for (int i = 0; i < MeshRenderers.Count; i++)
         {
             MeshRendererMap map = MeshRenderers[i];
 
-            if (map.NormalMeshRenderer == null)
+            if (map.NormalMeshRenderer is null)
                 continue;
 
             for (int set = 0; set < map.MaterialSets.Count; set++)
             {
                 for (int slot = 0; slot < map.MaterialSets[set].Count; ++slot)
                 {
-                    if (map.MaterialSets[set][slot].Normal == null)
+                    if (map.MaterialSets[set][slot].Normal is null)
                         continue;
 
                     var name = $"{map.NormalMeshRenderer.ToLongString()}, material set {set}, slot {slot}";
 
                     var oldMaterial = map.MaterialSets[set][slot].Normal;
                     var statueType = map.MaterialSets[set][slot].TransitionType;
-                    var key = $"{oldMaterial.ReferenceID}_{statueType}";
+                    var key = $"{oldMaterial!.ReferenceID}_{statueType}";
 
                     if (!oldMaterialToNewNormalMaterialMap.ContainsKey(key))
                     {
@@ -143,6 +149,9 @@ internal partial class Avatar
 
     public void GenerateStatueMaterials()
     {
+        if (_statueMaterials is null)
+            return;
+
         Log.Info("=== Generating statue materials");
 
         // Destroy all existing children
@@ -153,22 +162,22 @@ internal partial class Avatar
         for (int i = 0; i < MeshRenderers.Count; i++)
         {
             MeshRendererMap map = MeshRenderers[i];
-            var isBlinder = map.NormalMeshRenderer == null && map.StatueMeshRenderer == null;
+            var isBlinder = map.NormalMeshRenderer is null && map.StatueMeshRenderer is null;
 
             for (int set = 0; set < map.MaterialSets.Count; ++set)
             {
                 for (int slot = 0; slot < map.MaterialSets[set].Count; ++slot)
                 {
-                    var name = map.StatueMeshRenderer == null ? "Blinder" : $"{map.StatueMeshRenderer.ToLongString()}, material set {set}, slot {slot}";
+                    var name = map.StatueMeshRenderer is null ? "Blinder" : $"{map.StatueMeshRenderer.ToLongString()}, material set {set}, slot {slot}";
 
                     var normalMaterial = map.MaterialSets[set][slot].Normal;
                     var statueMaterial = map.MaterialSets[set][slot].Statue;
                     var defaultMaterialAsIs = isBlinder || map.MaterialSets[set][slot].UseAsIs;
 
-                    if (statueMaterial == null)
+                    if (statueMaterial is null)
                         continue;
 
-                    if (!isBlinder && normalMaterial == null && statueMaterial != null)
+                    if (!isBlinder && normalMaterial is null && statueMaterial is not null)
                     {
                         Log.Warn($"{map.NormalMeshRenderer.ToLongString()}, material {slot} is null, skipping statue material");
                         continue;
@@ -181,15 +190,15 @@ internal partial class Avatar
                         Log.Info($"Creating statue material {oldMaterialToStatueMaterialMap.Count} as duplicate of {key}");
                         Log.Debug(defaultMaterialAsIs ? "Using material as-is" : "Merging with normal material maps");
 
-                        // If assigned == null, use default
+                        // If assigned is null, use default
 
                         // Create a new statue material object (i.e. drives material slot on statue
                         // SMR, has default material with normal map)
                         var newMaterialHolder = _statueMaterials.AddSlot(map.StatueSlot == null ? $"Statue {oldMaterialToStatueMaterialMap.Count}" : $"{map.StatueSlot.Name}.Set{set}.Material{slot}");
 
                         var newDefaultMaterialRefId = defaultMaterialAsIs
-                            ? newMaterialHolder.CopyComponent((AssetProvider<Material>)statueMaterial).ReferenceID
-                            : MaterialHelpers.CreateStatueMaterial(normalMaterial, statueMaterial, newMaterialHolder).ReferenceID;
+                            ? newMaterialHolder.CopyComponent((AssetProvider<Material>)statueMaterial!).ReferenceID
+                            : MaterialHelpers.CreateStatueMaterial(normalMaterial!, statueMaterial!, newMaterialHolder).ReferenceID;
 
                         // Assigns Statue.Material.Assigned to equality
                         var assignedMaterialDriver = newMaterialHolder.AttachComponent<DynamicReferenceVariableDriver<IAssetProvider<Material>>>();
@@ -227,24 +236,24 @@ internal partial class Avatar
                         // Add dynvar with information about the original material
                         var originalDynVar = newMaterialHolder.AttachComponent<DynamicReferenceVariable<Slot>>();
                         originalDynVar.VariableName.Value = $"Avatar/Statue.OriginalStatueMaterial{oldMaterialToStatueMaterialMap.Count}";
-                        originalDynVar.Reference.Target = statueMaterial.Slot;
+                        originalDynVar.Reference.Target = statueMaterial!.Slot;
 
                         if (!defaultMaterialAsIs)
                         {
                             // Add dynvar with information about the original material it was based on
                             var basedOnDynVar = newMaterialHolder.AttachComponent<DynamicReferenceVariable<Slot>>();
                             basedOnDynVar.VariableName.Value = $"Avatar/Statue.BasedOnNormalMaterial{oldMaterialToStatueMaterialMap.Count}";
-                            basedOnDynVar.Reference.Target = normalMaterial.Slot;
+                            basedOnDynVar.Reference.Target = normalMaterial!.Slot;
                         }
 
                         oldMaterialToStatueMaterialMap.Add(key, multiDriver);
                     }
 
-                    if (map.StatueMeshRenderer != null && slot < map.StatueMeshRenderer.Materials.Count)
+                    if (map.StatueMeshRenderer is not null && slot < map.StatueMeshRenderer.Materials.Count)
                     {
                         var drives = oldMaterialToStatueMaterialMap[key].Drives;
 
-                        if (map.StatueMaterialSet != null)
+                        if (map.StatueMaterialSet is not null)
                         {
                             drives.Add().ForceLink(map.StatueMaterialSet.Sets[set].GetElement(slot));
                         }
@@ -252,7 +261,7 @@ internal partial class Avatar
                         {
                             var materialSlot = map.StatueMeshRenderer.Materials.GetElement(slot);
                             var element = materialSlot.ActiveLink as SyncElement;
-                            if (materialSlot.IsDriven && materialSlot.IsLinked)
+                            if (element is not null && materialSlot.IsDriven && materialSlot.IsLinked)
                                 Log.Warn($"{name} appears to already be driven by {element.Component.ToLongString()}, attempting to set anyway");
 
                             drives.Add().ForceLink(materialSlot);
@@ -283,19 +292,19 @@ internal partial class Avatar
         }
     }
 
-    private IAssetProvider<Material> GetDefaultMaterial(IAssetProvider<Material> defaultMaterial)
+    private IAssetProvider<Material>? GetDefaultMaterial(IAssetProvider<Material>? defaultMaterial)
     {
-        var statue0Material = (IAssetProvider<Material>)_generatedMaterials?
+        var statue0Material = (IAssetProvider<Material>?)_generatedMaterials?
             .FindChild("Statue Materials")?
             .FindChild("Statue 0")?
             .GetComponent<AssetProvider<Material>>();
 
-        if ((defaultMaterial == null || defaultMaterial.ReferenceID == RefID.Null) && statue0Material != null)
+        if ((defaultMaterial is null || defaultMaterial.ReferenceID == RefID.Null) && statue0Material is not null)
         {
             defaultMaterial = statue0Material;
             Log.Debug($"Using existing default statue material, {statue0Material.ToShortString()}");
         }
-        else if (defaultMaterial != null && defaultMaterial.ReferenceID != RefID.Null)
+        else if (defaultMaterial is not null && defaultMaterial.ReferenceID != RefID.Null)
         {
             Log.Info($"Using user supplied default statue material, {defaultMaterial.ToShortString()}");
         }
@@ -307,14 +316,14 @@ internal partial class Avatar
         return defaultMaterial;
     }
 
-    private bool HasMaterialSet(MeshRenderer renderer, out MaterialSet materialSet)
+    private bool HasMaterialSet(MeshRenderer? renderer, [NotNullWhen(true)] out MaterialSet? materialSet)
     {
-        if (renderer != null && renderer.Materials.IsDriven && renderer.Materials.IsLinked)
+        if (renderer?.Materials.IsDriven == true && renderer.Materials.IsLinked)
         {
             var element = renderer.Materials.ActiveLink as SyncElement;
-            if (element.Component is MaterialSet)
+            if (element?.Component is MaterialSet set)
             {
-                materialSet = element.Component as MaterialSet;
+                materialSet = set;
                 return true;
             }
         }

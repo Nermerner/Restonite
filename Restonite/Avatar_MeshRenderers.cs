@@ -23,7 +23,7 @@ internal partial class Avatar
 
         foreach (var map in MeshRenderers)
         {
-            if (map.NormalSlot != null && map.StatueSlot == null)
+            if (map.NormalSlot is not null && map.StatueSlot is null)
             {
                 map.StatueSlot = map.NormalSlot.Duplicate();
                 map.StatueSlot.Name = map.NormalSlot.Name + "_Statue";
@@ -35,12 +35,15 @@ internal partial class Avatar
 
                 foreach (var renderer in statueRenderers)
                 {
-                    var foundMap = MeshRenderers.Find(toSearch => toSearch.NormalSlot == map.NormalSlot && (toSearch.NormalMeshRenderer?.Mesh.Value == renderer.Mesh.Value || toSearch.NormalMeshRenderer?.Mesh.Value.GetType() == renderer.Mesh.Value.GetType()));
-                    if (foundMap != null)
+                    var foundMap = MeshRenderers.Find(toSearch => toSearch.NormalSlot == map.NormalSlot
+                        && (toSearch.NormalMeshRenderer?.Mesh.Value == renderer.Mesh.Value
+                            || toSearch.NormalMeshRenderer?.Mesh.Value.GetType() == renderer.Mesh.Value.GetType()));
+
+                    if (foundMap is not null)
                     {
-                        if (renderer.Mesh.Value != foundMap.NormalMeshRenderer.Mesh.Value)
+                        if (renderer.Mesh.Value != foundMap.NormalMeshRenderer!.Mesh.Value)
                         {
-                            foundMap.StatueSlot.RemoveComponent(renderer.Mesh.Value);
+                            foundMap.StatueSlot!.RemoveComponent(renderer.Mesh.Value);
                             renderer.Mesh.Value = foundMap.NormalMeshRenderer.Mesh.Value;
                         }
 
@@ -61,9 +64,9 @@ internal partial class Avatar
 
         foreach (var map in MeshRenderers)
         {
-            if (map.NormalMaterialSet != null && map.StatueMaterialSet == null)
+            if (map.NormalMaterialSet is not null && map.StatueMaterialSet is null)
             {
-                var slot = map.StatueMeshRenderer.Slot;
+                var slot = map.StatueMeshRenderer!.Slot;
 
                 map.StatueMaterialSet = slot.AttachComponent<MaterialSet>();
                 map.StatueMaterialSet.Target.ForceLink(map.StatueMeshRenderer.Materials);
@@ -79,7 +82,7 @@ internal partial class Avatar
                 indexValueDriver.Source.Value = map.NormalMaterialSet.ActiveSetIndex.ReferenceID;
                 indexValueDriver.Target.Value = map.StatueMaterialSet.ActiveSetIndex.ReferenceID;
             }
-            else if (map.NormalMaterialSet != null && map.StatueMaterialSet != null)
+            else if (map.NormalMaterialSet is not null && map.StatueMaterialSet is not null)
             {
                 // Ensure the same amount of sets
                 while (map.StatueMaterialSet.Sets.Count < map.NormalMaterialSet.Sets.Count)
@@ -113,7 +116,7 @@ internal partial class Avatar
 
     public void RemoveMeshRenderer(MeshRendererMap map)
     {
-        if (map != null)
+        if (map is not null)
         {
             Log.Info($"Removing {map.NormalMeshRenderer.ToLongString()} from setup");
             MeshRenderers.Remove(map);
@@ -122,7 +125,7 @@ internal partial class Avatar
 
     public void RemoveUnmatchedMeshRenderers()
     {
-        var toRemoveList = MeshRenderers.Where(x => x.NormalMeshRenderer != null && x.StatueMeshRenderer == null).ToList();
+        var toRemoveList = MeshRenderers.Where(x => x.NormalMeshRenderer is not null && x.StatueMeshRenderer is null).ToList();
         foreach (var toRemove in toRemoveList)
             RemoveMeshRenderer(toRemove);
     }
@@ -131,7 +134,7 @@ internal partial class Avatar
 
     #region Private Methods
 
-    private void AddMeshRenderer(MeshRenderer normal, MeshRenderer statue, IAssetProvider<Material> defaultMaterial, StatueType transitionType, bool useDefaultAsIs)
+    private void AddMeshRenderer(MeshRenderer normal, MeshRenderer? statue, IAssetProvider<Material>? defaultMaterial, StatueType transitionType, bool useDefaultAsIs)
     {
         var rendererMap = new MeshRendererMap
         {
@@ -156,7 +159,7 @@ internal partial class Avatar
             Log.Debug($"    Statue MeshRenderer has {statueMaterialSet.ToShortString()} with {statueMaterialSet.Sets.Count} sets");
         }
 
-        if (rendererMap.NormalMaterialSet != null)
+        if (rendererMap.NormalMaterialSet is not null)
         {
             rendererMap.MaterialSets = rendererMap.NormalMaterialSet.Sets.Select(set => set.Select(material => new MaterialMap
             {
@@ -185,7 +188,7 @@ internal partial class Avatar
             for (int i = 0; i < rendererMap.MaterialSets[set].Count; i++)
             {
                 MaterialMap material = rendererMap.MaterialSets[set][i];
-                if (material.Statue != null)
+                if (material.Statue is not null)
                     Log.Debug($"    Material set {set}, slot {i} with {material.Normal.ToShortString()} linked to {material.Statue.ToShortString()}");
             }
         }

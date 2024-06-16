@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Restonite
 {
-    public static class CloudSpawn
+    internal static class CloudSpawn
     {
         #region Public Methods
 
@@ -32,7 +32,7 @@ namespace Restonite
 
                 string fileData = scratchSpace.Engine.AssetManager.GatherAssetFile(new Uri(record.Entity.AssetURI), 100.0f).GetAwaiter().GetResult();
 
-                if (fileData != null)
+                if (fileData is not null)
                 {
                     scratchSpace.LocalUser.GetPointInFrontOfUser(out var point, out var rotation, float3.Backward);
 

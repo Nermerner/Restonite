@@ -1,17 +1,24 @@
 ﻿using FrooxEngine;
-using System.Collections.Generic;
 
 namespace Restonite
 {
-    public class DynVarSlot
+    internal class DynVarSlot
     {
-        public Slot Slot { get; }
-        public IDynamicVariable DynamicVariable { get; }
+        #region Public Constructors
 
         public DynVarSlot(Slot slot, IDynamicVariable dynamicVariable)
         {
             Slot = slot;
             DynamicVariable = dynamicVariable;
         }
+
+        #endregion
+
+        #region Public Properties
+
+        public IDynamicVariable DynamicVariable { get; }
+        public Slot Slot { get; }
+
+        #endregion
     }
 }

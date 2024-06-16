@@ -9,22 +9,22 @@ namespace Restonite
 
         public static void Setup(this EnumMemberEditor editor, IField target)
         {
-            UIBuilder ui = new UIBuilder(editor.Slot);
+            var ui = new UIBuilder(editor.Slot);
             RadiantUI_Constants.SetupEditorStyle(ui);
             editor.Setup(target, null, ui);
         }
 
-        public static string ToLongString(this Component component)
+        public static string ToLongString(this Component? component)
         {
-            if (component == null)
+            if (component is null)
                 return "null";
             else
                 return $"{component.GetType().Name}/{component.ReferenceID} on {component.Slot.Name}";
         }
 
-        public static string ToLongString(this IAssetProvider<Material> material)
+        public static string ToLongString(this IAssetProvider<Material>? material)
         {
-            if (material == null)
+            if (material is null)
                 return "null";
             else
                 return $"{material.GetType().Name}/{material.ReferenceID} on {material.Slot.Name}";
@@ -35,25 +35,25 @@ namespace Restonite
             return text.Replace("<br>", "\r\n");
         }
 
-        public static string ToShortString(this Component component)
+        public static string ToShortString(this Component? component)
         {
-            if (component == null)
+            if (component is null)
                 return "null";
             else
                 return $"{component.GetType().Name}/{component.ReferenceID}";
         }
 
-        public static string ToShortString(this IAssetProvider<Material> material)
+        public static string ToShortString(this IAssetProvider<Material>? material)
         {
-            if (material == null)
+            if (material is null)
                 return "null";
             else
                 return $"{material.GetType().Name}/{material.ReferenceID}";
         }
 
-        public static string ToShortString(this Slot slot)
+        public static string ToShortString(this Slot? slot)
         {
-            if (slot == null)
+            if (slot is null)
                 return "null";
             else
                 return $"{slot.Name}/{slot.ReferenceID}";

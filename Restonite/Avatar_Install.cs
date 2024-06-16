@@ -1,4 +1,4 @@
-﻿using Elements.Core;
+using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -13,6 +13,9 @@ internal partial class Avatar
 
     public void InstallRemasterSystem(Slot systemSlot, SyncRef<Slot> contextMenuSlot)
     {
+        if (AvatarRoot is null || StatueRoot is null || _defaults is null)
+            return;
+
         Log.Info("=== Installing Remaster system on avatar");
 
         // Remove the old system
@@ -30,11 +33,11 @@ internal partial class Avatar
         if (contextMenuSlot.Value != RefID.Null)
         {
             var rootContextMenu = StatueRoot.GetComponentInChildren<RootContextMenuItem>();
-            if (rootContextMenu != null)
+            if (rootContextMenu is not null)
             {
                 var slot = rootContextMenu.Slot;
                 var menuSlot = slot.FindChild("Statufication");
-                if (menuSlot != null)
+                if (menuSlot is not null)
                 {
                     // Remove RootContextMenuItem
                     slot.RemoveComponent(rootContextMenu);
@@ -53,7 +56,7 @@ internal partial class Avatar
 
         var updateSlot = systemSlot.GetChildrenWithTag("StatueUserConfig").FirstOrDefault();
 
-        if (updateSlot != null)
+        if (updateSlot is not null)
         {
             var oldDefaults = _defaults.GetComponentsInChildren<IDynamicVariable>().ConvertAll(x => new DynVarSlot(((Component)x).Slot, x));
 
@@ -62,7 +65,7 @@ internal partial class Avatar
                     .ConvertAll(x => new DynVarSlot(((Component)x).Slot, x));
 
             // Update user config slot
-            if (_userConfig == null)
+            if (_userConfig is null)
             {
                 Log.Info($"Adding {updateSlot.ToShortString()} with tag {updateSlot.Tag}");
 
@@ -155,11 +158,11 @@ internal partial class Avatar
                 }
             }
 
-            _defaults?.Destroy();
+            _defaults.Destroy();
             _defaults = null;
 
             // Set default configs if null
-            if (_userConfig != null)
+            if (_userConfig is not null)
             {
                 var oldSlots = _userConfig.GetAllChildren().Where(x => x.Parent == _userConfig).ToList();
                 var newSlots = updateSlot.GetAllChildren().Where(x => x.Parent == updateSlot).ToList();
@@ -177,20 +180,20 @@ internal partial class Avatar
                     Log.Info($"Updating user config values in {_userConfig.ToShortString()}");
 
                     var avatarRoot = _userConfig.GetComponentInChildren<DynamicReferenceVariable<Slot>>(x => x.VariableName == "Avatar/Statue.AvatarRoot");
-                    if (avatarRoot != null && avatarRoot.Reference.Target == null)
+                    if (avatarRoot is not null && avatarRoot.Reference.Target is null)
                     {
                         avatarRoot.Reference.Target = AvatarRoot;
                         Log.Info($"Setting user config {avatarRoot.Slot.ToShortString()} to {AvatarRoot.ToShortString()}");
                     }
 
                     var soundEffectDefault = _userConfig.GetComponentInChildren<DynamicReferenceVariable<IAssetProvider<AudioClip>>>(x => x.VariableName == "Avatar/Statue.SoundEffect.Default");
-                    if (soundEffectDefault != null)
+                    if (soundEffectDefault is not null)
                     {
                         var audioClip = soundEffectDefault.Slot.GetComponent<StaticAudioClip>();
-                        if (audioClip == null)
+                        if (audioClip is null)
                             Log.Warn($"Couldn't find audio clip in {soundEffectDefault.ToShortString()}");
 
-                        if (audioClip != null && soundEffectDefault.Reference.Target == null)
+                        if (audioClip is not null && soundEffectDefault.Reference.Target is null)
                         {
                             soundEffectDefault.Reference.Target = audioClip;
                             Log.Info($"Setting user config {soundEffectDefault.Slot.ToShortString()} to {audioClip.ToShortString()}");
@@ -198,7 +201,7 @@ internal partial class Avatar
                     }
 
                     var slicerRefScale = _userConfig.GetComponentInChildren<DynamicValueVariable<float3>>(x => x.VariableName == "Avatar/Statue.Slicer.RefScale");
-                    if (slicerRefScale != null)
+                    if (slicerRefScale is not null)
                     {
                         slicerRefScale.Value.Value = AvatarRoot.GlobalScale;
                         Log.Info($"Setting user config {slicerRefScale.Slot.ToShortString()} to {AvatarRoot.GlobalScale}");
@@ -207,28 +210,28 @@ internal partial class Avatar
                     var transitionTypes = MeshRenderers.SelectMany(x => x.MaterialSets).SelectMany(x => x).Select(x => x.TransitionType).Distinct().ToList();
 
                     var enableAlphaFade = _userConfig.GetComponentInChildren<DynamicValueVariable<bool>>(x => x.VariableName == "Avatar/Statue.Material.EnableAlphaFade");
-                    if (enableAlphaFade != null)
+                    if (enableAlphaFade is not null)
                     {
                         enableAlphaFade.Value.Value = transitionTypes.Contains(StatueType.AlphaFade);
                         Log.Info($"Setting user config {enableAlphaFade.Slot.ToShortString()} to {enableAlphaFade.Value.Value}");
                     }
 
                     var enableAlphaCutout = _userConfig.GetComponentInChildren<DynamicValueVariable<bool>>(x => x.VariableName == "Avatar/Statue.Material.EnableAlphaCutout");
-                    if (enableAlphaCutout != null)
+                    if (enableAlphaCutout is not null)
                     {
                         enableAlphaCutout.Value.Value = transitionTypes.Contains(StatueType.AlphaCutout);
                         Log.Info($"Setting user config {enableAlphaCutout.Slot.ToShortString()} to {enableAlphaCutout.Value.Value}");
                     }
 
                     var enablePlanarSlice = _userConfig.GetComponentInChildren<DynamicValueVariable<bool>>(x => x.VariableName == "Avatar/Statue.Material.EnablePlanarSlice");
-                    if (enablePlanarSlice != null)
+                    if (enablePlanarSlice is not null)
                     {
                         enablePlanarSlice.Value.Value = transitionTypes.Contains(StatueType.PlaneSlicer);
                         Log.Info($"Setting user config {enablePlanarSlice.Slot.ToShortString()} to {enablePlanarSlice.Value.Value}");
                     }
 
                     var enableRadialSlicer = _userConfig.GetComponentInChildren<DynamicValueVariable<bool>>(x => x.VariableName == "Avatar/Statue.Material.EnableRadialSlicer");
-                    if (enableRadialSlicer != null)
+                    if (enableRadialSlicer is not null)
                     {
                         enableRadialSlicer.Value.Value = transitionTypes.Contains(StatueType.RadialSlicer);
                         Log.Info($"Setting user config {enableRadialSlicer.Slot.ToShortString()} to {enableRadialSlicer.Value.Value}");
@@ -240,35 +243,36 @@ internal partial class Avatar
 
     public void RemoveLegacySystem()
     {
-        if (_legacySystem != null)
-        {
-            Log.Info("=== Removing legacy system");
+        if (AvatarRoot is null || _legacySystem is null)
+            return;
 
-            var legacyDisableOnStatueSlot = _legacySystem.FindChild("Disable on Statue", false, false, -1);
-            if (legacyDisableOnStatueSlot != null)
+        Log.Info("=== Removing legacy system");
+
+        var legacyDisableOnStatueSlot = _legacySystem.FindChild("Disable on Statue", false, false, -1);
+        if (legacyDisableOnStatueSlot is not null)
+        {
+            var existingMultiDriver = legacyDisableOnStatueSlot.GetComponent<ValueMultiDriver<bool>>();
+            if (existingMultiDriver is not null)
             {
-                var existingMultiDriver = legacyDisableOnStatueSlot.GetComponent<ValueMultiDriver<bool>>();
-                if (existingMultiDriver != null)
+                foreach (var drive in existingMultiDriver.Drives.Select(x => x.Target))
                 {
-                    foreach (var drive in existingMultiDriver.Drives)
+                    var worker = drive.FindNearestParent<Worker>();
+                    if (worker is DynamicBoneChain dbc)
                     {
-                        var worker = drive.Target.FindNearestParent<Worker>();
-                        if (worker is DynamicBoneChain dbc)
-                        {
-                            Log.Debug($"Moving drive for {dbc.ToShortString()} to slot {dbc.Slot.ToShortString()}");
+                        Log.Debug($"Moving drive for {dbc.ToShortString()} to slot {dbc.Slot.ToShortString()}");
                             _existingDrivesForDisableOnFreeze.Add(dbc.Slot.ActiveSelf_Field);
                         }
                         else if (worker is EyeManager em)
                         {
                             Log.Debug($"Moving drive for {em.ToShortString()} to slot {em.Slot.ToShortString()}");
                             _existingDrivesForDisableOnFreeze.Add(em.Slot.ActiveSelf_Field);
-                        }
-                        else
-                        {
-                            _existingDrivesForDisableOnFreeze.Add(drive.Target);
-                        }
+                    }
+                    else
+                    {
+                        _existingDrivesForDisableOnFreeze.Add(drive);
                     }
                 }
+            }
             }
             Log.Info($"Collected {_existingDrivesForDisableOnFreeze.Count} drivers for Disable on Statue");
 
@@ -284,18 +288,17 @@ internal partial class Avatar
             {
                 Log.Info($"Removing {component.ToLongString()}");
                 component.Slot.RemoveComponent(component);
-            }
-
-            _legacySystem.Destroy();
-            _legacyAddons.Destroy();
         }
+
+        _legacySystem.Destroy();
+        _legacyAddons?.Destroy();
     }
 
     public bool VerifyInstallRequirements()
     {
         foreach (var map in MeshRenderers)
         {
-            if (map.NormalMeshRenderer != null)
+            if (map.NormalMeshRenderer is not null)
             {
                 // Check for any nested MeshRenderers
                 var smrsInChildren = map.NormalMeshRenderer.Slot.GetComponentsInChildren<MeshRenderer>();
@@ -312,20 +315,20 @@ internal partial class Avatar
                 {
                     var material = map.MaterialSets[set][i];
 
-                    if (material.Normal != null)
+                    if (material.Normal is not null)
                     {
                         // Check for incompatible transition types for materials
                         if ((material.TransitionType == StatueType.PlaneSlicer || material.TransitionType == StatueType.RadialSlicer)
-                            && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular) && !(material.Normal is PBS_DistanceLerpMaterial))
+                            && material.Normal is not IPBS_Metallic && material.Normal is not IPBS_Specular && material.Normal is not PBS_DistanceLerpMaterial)
                         {
                             Log.Error($"{material.Normal.GetType().Name} does not support {material.TransitionType}, aborting");
                             return false;
                         }
                         else if ((material.TransitionType == StatueType.AlphaFade || material.TransitionType == StatueType.AlphaCutout)
-                            && !(material.Normal is PBS_DualSidedMetallic) && !(material.Normal is PBS_DualSidedSpecular)
-                            && !(material.Normal is IPBS_Metallic) && !(material.Normal is IPBS_Specular)
-                            && !(material.Normal is XiexeToonMaterial) && !(material.Normal is PBS_DistanceLerpMaterial)
-                            && !(material.Normal is UnlitMaterial))
+                            && material.Normal is not PBS_DualSidedMetallic && material.Normal is not PBS_DualSidedSpecular
+                            && material.Normal is not IPBS_Metallic && material.Normal is not IPBS_Specular
+                            && material.Normal is not XiexeToonMaterial && material.Normal is not PBS_DistanceLerpMaterial
+                            && material.Normal is not UnlitMaterial)
                         {
                             Log.Error($"{material.Normal.GetType().Name} does not support {material.TransitionType}, aborting");
                             return false;
@@ -333,7 +336,7 @@ internal partial class Avatar
                     }
 
                     // Check for missing statue materials
-                    if (material.Statue == null || material.Statue.ReferenceID == RefID.Null)
+                    if (material.Statue is null || material.Statue.ReferenceID == RefID.Null)
                     {
                         Log.Error("Missing default statue material for some material slots, aborting");
                         return false;

@@ -12,10 +12,10 @@ namespace Restonite
     {
         #region Public Properties
 
-        public Slot AvatarRoot { get; private set; }
+        public Slot? AvatarRoot { get; private set; }
         public bool HasExistingSystem { get; private set; }
         public bool HasLegacySystem { get; private set; }
-        public Slot StatueRoot { get; private set; }
+        public Slot? StatueRoot { get; private set; }
 
         #endregion
 
@@ -23,6 +23,9 @@ namespace Restonite
 
         public void CopyBlendshapes()
         {
+            if (_meshes is null || _blendshapes is null)
+                return;
+
             Log.Info("=== Creating drivers between normal/statue slots and blend shapes");
 
             // Remove existing drivers
@@ -32,10 +35,10 @@ namespace Restonite
             var meshCount = 0;
             foreach (var map in MeshRenderers)
             {
-                if (map.NormalSlot == null || map.StatueSlot == null)
+                if (map.NormalSlot is null || map.StatueSlot is null)
                     continue;
 
-                if (!(map.NormalMeshRenderer is SkinnedMeshRenderer normalSmr) || !(map.StatueMeshRenderer is SkinnedMeshRenderer statueSmr))
+                if (map.NormalMeshRenderer is not SkinnedMeshRenderer normalSmr || map.StatueMeshRenderer is not SkinnedMeshRenderer statueSmr)
                     continue;
 
                 // Remove any DirectVisemeDrivers from statue slots as these will be driven by ValueCopys
@@ -74,7 +77,7 @@ namespace Restonite
                         var statueBlendshape = statueSmr.GetBlendShape(statueBlendshapeName);
 
                         // Only ValueCopy driven blendshapes
-                        if (normalBlendshapeName == statueBlendshapeName && normalBlendshape?.IsDriven == true && statueBlendshape != null)
+                        if (normalBlendshapeName == statueBlendshapeName && normalBlendshape?.IsDriven == true && statueBlendshape is not null)
                         {
                             var valueCopy = blendshapeDrivers.AttachComponent<ValueCopy<float>>();
                             valueCopy.Source.Value = normalBlendshape.ReferenceID;
@@ -98,38 +101,41 @@ namespace Restonite
 
         public void CreateOrUpdateDefaults()
         {
-            if (_defaults != null)
+            if (_defaults is null)
+                return;
+
+            Log.Info("=== Creating defaults configuration");
+
+            var durationDefault = _defaults.GetComponent<DynamicValueVariable<float>>(x => x.VariableName.Value == "Avatar/Statue.Duration.Default");
+            if (durationDefault is null)
             {
-                Log.Info("=== Creating defaults configuration");
-
-                var durationDefault = _defaults.GetComponent<DynamicValueVariable<float>>(x => x.VariableName.Value == "Avatar/Statue.Duration.Default");
-                if (durationDefault == null)
-                {
-                    durationDefault = _defaults.AttachComponent<DynamicValueVariable<float>>();
-                    durationDefault.VariableName.Value = "Avatar/Statue.Duration.Default";
+                durationDefault = _defaults.AttachComponent<DynamicValueVariable<float>>();
+                durationDefault.VariableName.Value = "Avatar/Statue.Duration.Default";
                     durationDefault.Value.Value = 10;
-                }
+            }
 
-                var whisperPersist = _defaults.GetComponent<DynamicValueVariable<bool>>(x => x.VariableName.Value == "Avatar/Statue.Whisper.Persist");
-                if (whisperPersist == null)
-                {
-                    whisperPersist = _defaults.AttachComponent<DynamicValueVariable<bool>>();
-                    whisperPersist.VariableName.Value = "Avatar/Statue.Whisper.Persist";
-                    whisperPersist.Value.Value = true;
-                }
+            var whisperPersist = _defaults.GetComponent<DynamicValueVariable<bool>>(x => x.VariableName.Value == "Avatar/Statue.Whisper.Persist");
+            if (whisperPersist is null)
+            {
+                whisperPersist = _defaults.AttachComponent<DynamicValueVariable<bool>>();
+                whisperPersist.VariableName.Value = "Avatar/Statue.Whisper.Persist";
+                whisperPersist.Value.Value = true;
             }
         }
 
         public void CreateOrUpdateDisableOnFreeze()
         {
+            if (AvatarRoot is null || _drivers is null)
+                return;
+
             Log.Info("=== Creating drivers for disable on freeze");
 
-            void AddFieldToMultidriver<T>(ValueMultiDriver<T> driver, IField<T> field) => driver.Drives.Add().ForceLink(field);
+            static void AddFieldToMultidriver<T>(ValueMultiDriver<T> driver, IField<T> field) => driver.Drives.Add().ForceLink(field);
 
             // Check for existing configuration and save the fields being driven
             var disableOnFreezeDriverSlot = _drivers.FindChildOrAdd("Avatar/Statue.DisableOnFreeze");
             var existingMultiDriver = disableOnFreezeDriverSlot.GetComponent<ValueMultiDriver<bool>>();
-            if (existingMultiDriver != null)
+            if (existingMultiDriver is not null)
             {
                 foreach (var drive in existingMultiDriver.Drives)
                 {
@@ -154,7 +160,7 @@ namespace Restonite
 
             AvatarRoot.GetComponentsInChildren<DynamicBoneChain>().ForEach((dbc) =>
             {
-                if (!boneChainSlots.ContainsKey(dbc.Slot.ReferenceID))
+                if (!boneChainSlots.ContainsKey(dbc.Slot.ReferenceID) && dbc.Slot != AvatarRoot)
                 {
                     boneChainSlots.Add(dbc.Slot.ReferenceID, dbc.Slot);
                 }
@@ -237,6 +243,9 @@ namespace Restonite
 
         public void CreateOrUpdateEnableDrivers()
         {
+            if (_drivers is null)
+                return;
+
             Log.Info("=== Creating drivers for enabling/disabling normal/statue bodies");
 
             var normalDriverSlot = _drivers.FindChildOrAdd("Avatar/Statue.BodyNormal");
@@ -250,9 +259,9 @@ namespace Restonite
             normalVarReader.Target.Value = normalDriver.Value.ReferenceID;
 
             var count = 0;
-            foreach (var smr in MeshRenderers.Where(x => x.NormalMeshRenderer != null))
+            foreach (var smr in MeshRenderers.Where(x => x.NormalMeshRenderer is not null))
             {
-                normalDriver.Drives.Add().ForceLink(smr.NormalMeshRenderer.EnabledField);
+                normalDriver.Drives.Add().ForceLink(smr.NormalMeshRenderer!.EnabledField);
                 count++;
             }
             Log.Info($"Linked {count} normal MeshRenderers to BodyNormal");
@@ -268,9 +277,9 @@ namespace Restonite
             statueVarReader.Target.Value = statueDriver.Value.ReferenceID;
 
             count = 0;
-            foreach (var smr in MeshRenderers.Where(x => x.StatueMeshRenderer != null))
+            foreach (var smr in MeshRenderers.Where(x => x.StatueMeshRenderer is not null))
             {
-                statueDriver.Drives.Add().ForceLink(smr.StatueMeshRenderer.EnabledField);
+                statueDriver.Drives.Add().ForceLink(smr.StatueMeshRenderer!.EnabledField);
                 count++;
             }
             Log.Info($"Linked {count} statue MeshRenderers to BodyStatue");
@@ -278,6 +287,9 @@ namespace Restonite
 
         public void CreateOrUpdateSlots(SyncRef<Slot> installSlot)
         {
+            if (AvatarRoot is null)
+                return;
+
             Log.Info("=== Setting up statue root slot on avatar");
 
             var rootInstallSlot = AvatarRoot;
@@ -285,8 +297,7 @@ namespace Restonite
                 rootInstallSlot = installSlot.Target;
 
             // Install to the selected slot
-            if (StatueRoot == null)
-                StatueRoot = rootInstallSlot.AddSlot("Statue");
+            StatueRoot ??= rootInstallSlot.AddSlot("Statue");
 
             // Reparent if a slot is given and the root is not already parented under it
             if (installSlot.Value != RefID.Null && StatueRoot.Parent != rootInstallSlot)
@@ -295,10 +306,10 @@ namespace Restonite
             StatueRoot.Tag = "StatueSystemSetupSlot";
 
             // Reparent old setups
-            if (_generatedMaterials != null && _generatedMaterials.Parent != StatueRoot)
+            if (_generatedMaterials is not null && _generatedMaterials.Parent != StatueRoot)
                 _generatedMaterials.SetParent(StatueRoot, false);
 
-            if (_drivers != null && _drivers.Parent != StatueRoot)
+            if (_drivers is not null && _drivers.Parent != StatueRoot)
                 _drivers.SetParent(StatueRoot, false);
 
             // Find existing slots
@@ -324,6 +335,9 @@ namespace Restonite
 
         public void CreateOrUpdateVoiceDrivers()
         {
+            if (AvatarRoot is null || _drivers is null)
+                return;
+
             Log.Info("=== Driving whisper volume");
 
             var whisperVolSlot = _drivers.FindChildOrAdd("Avatar/Statue.WhisperVolume");
@@ -355,19 +369,19 @@ namespace Restonite
 
         public void OpenUserConfigInspector()
         {
-            if (_userConfig != null)
+            if (_userConfig is not null)
             {
                 _userConfig.OpenInspectorForTarget();
                 Log.Success("Check Statue User Config slot for system configuration options.");
             }
-            else if (_defaults != null)
+            else if (_defaults is not null)
             {
                 _defaults.OpenInspectorForTarget();
                 Log.Success("Check Defaults slot for system configuration options.");
             }
         }
 
-        public void ReadAvatarRoot(Slot newAvatarRoot, IAssetProvider<Material> defaultMaterial, bool skinnedMeshRenderersOnly, bool useDefaultAsIs, StatueType transitionType)
+        public void ReadAvatarRoot(Slot newAvatarRoot, IAssetProvider<Material>? defaultMaterial, bool skinnedMeshRenderersOnly, bool useDefaultAsIs, StatueType transitionType)
         {
             MeshRenderers.Clear();
             AvatarRoot = newAvatarRoot;
@@ -377,7 +391,7 @@ namespace Restonite
             _skinnedMeshRenderersOnly = skinnedMeshRenderersOnly;
             _existingDrivesForDisableOnFreeze.Clear();
 
-            if (AvatarRoot == null)
+            if (AvatarRoot is null)
                 return;
 
             Log.Clear();
@@ -385,9 +399,9 @@ namespace Restonite
 
             var children = AvatarRoot.GetAllChildren();
 
-            StatueRoot = FindSlot(children, slot => slot.FindChild("Drivers") != null && slot.FindChild("Generated Materials") != null, "Statue", "StatueSystemSetupSlot");
-            _generatedMaterials = FindSlot(children, slot => slot.FindChild("Statue Materials") != null && slot.FindChild("Normal Materials") != null, "Generated Materials");
-            _drivers = FindSlot(children, slot => slot.FindChild("Avatar/Statue.BodyNormal") != null, "Drivers");
+            StatueRoot = FindSlot(children, slot => slot.FindChild("Drivers") is not null && slot.FindChild("Generated Materials") is not null, "Statue", "StatueSystemSetupSlot");
+            _generatedMaterials = FindSlot(children, slot => slot.FindChild("Statue Materials") is not null && slot.FindChild("Normal Materials") is not null, "Generated Materials");
+            _drivers = FindSlot(children, slot => slot.FindChild("Avatar/Statue.BodyNormal") is not null, "Drivers");
 
             _legacySystem = AvatarRoot.FindChildInHierarchy("<color=#dadada>Statuefication</color>");
             _legacyAddons = AvatarRoot.FindChildInHierarchy("<color=#dadada>Statue Add-Ons</color>");
@@ -398,13 +412,13 @@ namespace Restonite
             Log.Debug($"Legacy system is {_legacySystem.ToShortString()}");
             Log.Debug($"Legacy addons is {_legacyAddons.ToShortString()}");
 
-            if (StatueRoot != null || (_drivers != null && _generatedMaterials != null))
+            if (StatueRoot is not null || (_drivers is not null && _generatedMaterials is not null))
             {
                 HasExistingSystem = true;
                 Log.Info("Avatar has existing Remaster system");
             }
 
-            if (_legacySystem != null || _legacyAddons != null)
+            if (_legacySystem is not null || _legacyAddons is not null)
             {
                 HasLegacySystem = true;
                 Log.Info("Avatar has legacy system installed");
@@ -448,7 +462,7 @@ namespace Restonite
                     foreach (var normalRenderer in normal)
                     {
                         var statueRenderer = statue.Select(x => (CommonStartSubstring(normalRenderer.Slot.Name, x.Slot.Name), x)).OrderByDescending(x => x.Item1).Take(1).Select(x => x.Item2).FirstOrDefault();
-                        if (statueRenderer != null)
+                        if (statueRenderer is not null)
                         {
                             AddMeshRenderer(normalRenderer, statueRenderer, defaultMaterial, transitionType, useDefaultAsIs);
                             statue.Remove(statueRenderer);
@@ -469,9 +483,12 @@ namespace Restonite
 
         public void SetupRootDynVar()
         {
+            if (AvatarRoot is null)
+                return;
+
             // Attach dynvar space
             var avatarSpace = AvatarRoot.GetComponent<DynamicVariableSpace>((space) => space.SpaceName == "Avatar");
-            if (avatarSpace == null)
+            if (avatarSpace is null)
             {
                 avatarSpace = AvatarRoot.AttachComponent<DynamicVariableSpace>();
                 avatarSpace.SpaceName.Value = "Avatar";
@@ -483,7 +500,7 @@ namespace Restonite
             }
         }
 
-        public void UpdateParameters(IAssetProvider<Material> defaultMaterial, bool useDefaultAsIs, StatueType transitionType)
+        public void UpdateParameters(IAssetProvider<Material>? defaultMaterial, bool useDefaultAsIs, StatueType transitionType)
         {
             defaultMaterial = GetDefaultMaterial(defaultMaterial);
 
@@ -505,32 +522,32 @@ namespace Restonite
 
         #region Private Fields
 
-        private readonly List<IField<bool>> _existingDrivesForDisableOnFreeze = new List<IField<bool>>();
-        private Slot _blendshapes;
-        private Slot _defaults;
-        private Slot _drivers;
-        private Slot _generatedMaterials;
-        private Slot _legacyAddons;
-        private Slot _legacySystem;
-        private Slot _meshes;
-        private Slot _normalMaterials;
-        private Slot _originalMaterials;
-        private Slot _originalNormalMaterials;
-        private Slot _originalStatueMaterials;
-        private Slot _scratchSpace;
+        private readonly List<IField<bool>> _existingDrivesForDisableOnFreeze = new();
+        private Slot? _blendshapes;
+        private Slot? _defaults;
+        private Slot? _drivers;
+        private Slot? _generatedMaterials;
+        private Slot? _legacyAddons;
+        private Slot? _legacySystem;
+        private Slot? _meshes;
+        private Slot? _normalMaterials;
+        private Slot? _originalMaterials;
+        private Slot? _originalNormalMaterials;
+        private Slot? _originalStatueMaterials;
+        private Slot? _scratchSpace;
         private bool _skinnedMeshRenderersOnly;
-        private Slot _statueMaterials;
-        private Slot _userConfig;
+        private Slot? _statueMaterials;
+        private Slot? _userConfig;
 
         #endregion
 
         #region Private Methods
 
-        private static Slot FindSlot(List<Slot> slots, Predicate<Slot> predicate, string name = null, string tag = null)
+        private static Slot? FindSlot(List<Slot> slots, Predicate<Slot> predicate, string? name = null, string? tag = null)
         {
             foreach (var slot in slots)
             {
-                if (((name == null && tag == null) || (tag != null && slot.Tag == tag) || (name != null && slot.Name == name)) && predicate(slot))
+                if (((name is null && tag is null) || (tag is not null && slot.Tag == tag) || (name is not null && slot.Name == name)) && predicate(slot))
                     return slot;
             }
 
@@ -560,7 +577,7 @@ namespace Restonite
                     return true;
 
                 var dynVar = element.Slot.GetComponent<DynamicValueVariableDriver<bool>>(x => x.VariableName == "Avatar/Statue.BodyStatue");
-                if (dynVar != null)
+                if (dynVar is not null)
                     return true;
 
                 if (element.Component is ValueMultiDriver<bool> multiDriver)

@@ -1,12 +1,6 @@
-﻿using Elements.Core;
+using Elements.Core;
 using FrooxEngine;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Restonite
 {
@@ -420,7 +414,7 @@ namespace Restonite
 
         public static IAssetProvider<Material> CopyMaterialToSlot(IAssetProvider<Material> originalMaterial, Slot destination)
         {
-            switch(originalMaterial)
+            switch (originalMaterial)
             {
                 case PBS_DistanceLerpMetallic dlm:
                     {
@@ -456,7 +450,7 @@ namespace Restonite
             switch (statueType)
             {
                 case StatueType.AlphaFade:
-                    switch(originalMaterial)
+                    switch (originalMaterial)
                     {
                         case PBS_DualSidedMetallic dsm:
                             {
@@ -608,7 +602,7 @@ namespace Restonite
         {
             ICommonMaterial commonMaterial = from as ICommonMaterial;
             ICommonMaterial commonMaterial2 = to as ICommonMaterial;
-            if (commonMaterial != null && commonMaterial2 != null)
+            if (commonMaterial is not null && commonMaterial2 is not null)
             {
                 commonMaterial2.NormalScale = commonMaterial.NormalScale;
                 commonMaterial2.NormalTextureScale = commonMaterial.NormalTextureScale;
@@ -618,21 +612,21 @@ namespace Restonite
 
             IPBS_Material iPBS_Material = from as IPBS_Material;
             IPBS_Material iPBS_Material2 = to as IPBS_Material;
-            if (iPBS_Material2 != null && commonMaterial != null)
+            if (iPBS_Material2 is not null && commonMaterial is not null)
             {
                 iPBS_Material2.TextureOffset = commonMaterial.TextureOffset;
                 iPBS_Material2.TextureScale = commonMaterial.TextureScale;
                 iPBS_Material2.NormalMap = commonMaterial.NormalMap;
             }
 
-            if (commonMaterial2 != null && iPBS_Material != null)
+            if (commonMaterial2 is not null && iPBS_Material is not null)
             {
                 commonMaterial2.TextureOffset = iPBS_Material.TextureOffset;
                 commonMaterial2.TextureScale = iPBS_Material.TextureScale;
                 commonMaterial2.NormalMap = iPBS_Material.NormalMap;
             }
 
-            if (iPBS_Material != null && iPBS_Material2 != null)
+            if (iPBS_Material is not null && iPBS_Material2 is not null)
             {
                 iPBS_Material2.TextureScale = iPBS_Material.TextureScale;
                 iPBS_Material2.TextureOffset = iPBS_Material.TextureOffset;

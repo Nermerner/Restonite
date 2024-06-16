@@ -28,7 +28,7 @@ namespace Restonite
                 statueSystemCloudURIVariable.IsLinkedToCloud.Value = true;
                 _uriVariable = statueSystemCloudURIVariable;
 
-                Slot Data = _wizardSlot.AddSlot("Data");
+                var Data = _wizardSlot.AddSlot("Data");
 
                 _avatarRoot = Data.AddSlot("avatarRoot").AttachComponent<ReferenceField<Slot>>();
                 _statueSystemFallback = Data.AddSlot("statueSystemFallback").AttachComponent<ReferenceField<Slot>>();
@@ -168,11 +168,11 @@ namespace Restonite
                 UI.Spacer(12f);
 
                 _removeNewButton = UI.Button("Remove new MeshRenderers");
-                _removeNewButton.LocalPressed += (a, b) => OnValuesChanged(false, true);
+                _removeNewButton.LocalPressed += (_, __) => OnValuesChanged(false, true);
                 _removeNewButton.Enabled = false;
 
                 _refreshButton = UI.Button("Refresh");
-                _refreshButton.LocalPressed += (a, b) => OnValuesChanged(true);
+                _refreshButton.LocalPressed += (_, __) => OnValuesChanged(true);
                 _refreshButton.Enabled = false;
 
                 _confirmButton = UI.Button("Install");
@@ -277,55 +277,56 @@ namespace Restonite
 
         public void ClearLog()
         {
-            if (_debugText != null)
+            if (_debugText is not null)
                 _debugText.Content.Value = string.Empty;
         }
 
         public void LogDebug(string logMessage)
         {
-            if (_debugText != null)
-                _debugText.Content.Value = $"<color=gray>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
+            if (_debugText is not null)
+                _debugText.Content.Value = $"<color=gray>{DateTime.Now:HH:mm:ss.fffffff}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
         }
 
         public void LogError(string logMessage)
         {
-            if (_debugText != null)
-                _debugText.Content.Value = $"<color=red>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
+            if (_debugText is not null)
+                _debugText.Content.Value = $"<color=red>{DateTime.Now:HH:mm:ss.fffffff}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
         }
 
         public void LogInfo(string logMessage)
         {
-            if (_debugText != null)
-                _debugText.Content.Value = $"<color=#e0e0e0>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
+            if (_debugText is not null)
+                _debugText.Content.Value = $"<color=#e0e0e0>{DateTime.Now:HH:mm:ss.fffffff}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
         }
 
         public void LogSuccess(string logMessage)
         {
-            if (_debugText != null)
-                _debugText.Content.Value = $"<color=green>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
+            if (_debugText is not null)
+                _debugText.Content.Value = $"<color=green>{DateTime.Now:HH:mm:ss.fffffff}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
         }
 
         public void LogWarn(string logMessage)
         {
-            if (_debugText != null)
-                _debugText.Content.Value = $"<color=yellow>{DateTime.Now.ToString("HH:mm:ss.fffffff")}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
+            if (_debugText is not null)
+                _debugText.Content.Value = $"<color=yellow>{DateTime.Now:HH:mm:ss.fffffff}: {logMessage}<br>{_debugText.Content?.Value ?? ""}";
         }
 
         #endregion
 
         #region Private Fields
 
-        private readonly Slot _advancedModeSlot;
-        private readonly Avatar _avatar;
-        private readonly ReferenceField<Slot> _avatarRoot;
-        private readonly ReferenceField<IAssetProvider<Material>> _baseStatueMaterial;
-        private readonly Button _confirmButton;
-        private readonly ReferenceField<Slot> _contextMenuSlot;
-        private readonly Text _debugText;
-        private readonly Checkbox _defaultMaterialAsIs;
-        private readonly ReferenceMultiplexer<MeshRenderer> _foundMeshRenderers;
+        private readonly Slot? _advancedModeSlot;
+        private readonly Avatar? _avatar;
+        private readonly ReferenceField<Slot>? _avatarRoot;
+        private readonly ReferenceField<IAssetProvider<Material>>? _baseStatueMaterial;
+        private readonly Button? _confirmButton;
+        private readonly ReferenceField<Slot>? _contextMenuSlot;
+        private readonly Text? _debugText;
+        private readonly Checkbox? _defaultMaterialAsIs;
+        private readonly ReferenceMultiplexer<MeshRenderer>? _foundMeshRenderers;
 
-        private readonly string _helpText = @"This mod installs and updates the Statue Remaster system on an avatar.
+        private readonly string _helpText = """
+This mod installs and updates the Statue Remaster system on an avatar.
 
 Advanced Mode:
 Advanced mode allows more fine grained control of what materials and options to use where.
@@ -334,7 +335,7 @@ Skinned Meshes only:
 Check this option to only look for SkinnedMeshRenderers. If you want to include regular MeshRenderers typically used for procedural meshes like BoxMesh etc uncheck this option.
 
 Avatar root:
-The root slot of the avatar to install to. The mod will try to find any existing legacy or remaster installations. Legacy installations can be updated to remaster. Additionally it will try to match the normal MeshRenderers with any existing statue MeshRenderers. If a MeshRenderer appears to show up twice it's likely it hasn't found a match. You can workaround this by adding ""Statue"" to the name of the slot.
+The root slot of the avatar to install to. The mod will try to find any existing legacy or remaster installations. Legacy installations can be updated to remaster. Additionally it will try to match the normal MeshRenderers with any existing statue MeshRenderers. If a MeshRenderer appears to show up twice it's likely it hasn't found a match. You can workaround this by adding "Statue" to the name of the slot.
 
 Default statue material:
 The material to use as the default statue material. It can be left null if you want to use the material installed previously. Additional materials can be added later using Advanced Mode.
@@ -358,19 +359,20 @@ Update:
 Updates the installation of the Remaster system on the avatar with new materials, meshes and installation options.
 
 Update from legacy:
-Updates the legacy installation to a Remaster installation on the avatar.";
+Updates the legacy installation to a Remaster installation on the avatar.
+""";
 
-        private readonly ReferenceField<Slot> _installSlot;
-        private readonly Func<Slot, Slot, SyncRef<Slot>, SyncRef<Slot>, bool> _installSystemOnAvatar;
-        private readonly Slot _listPanel;
-        private readonly Button _refreshButton;
-        private readonly Button _removeNewButton;
-        private readonly Slot _simpleModeSlot;
-        private readonly Checkbox _skinnedMeshRenderersOnly;
-        private readonly ReferenceField<Slot> _statueSystemFallback;
-        private readonly ValueField<int> _statueType;
-        private readonly CloudValueVariable<string> _uriVariable;
-        private readonly Slot _wizardSlot;
+        private readonly ReferenceField<Slot>? _installSlot;
+        private readonly Func<Slot, Slot, SyncRef<Slot>, SyncRef<Slot>, bool>? _installSystemOnAvatar;
+        private readonly Slot? _listPanel;
+        private readonly Button? _refreshButton;
+        private readonly Button? _removeNewButton;
+        private readonly Slot? _simpleModeSlot;
+        private readonly Checkbox? _skinnedMeshRenderersOnly;
+        private readonly ReferenceField<Slot>? _statueSystemFallback;
+        private readonly ValueField<int>? _statueType;
+        private readonly CloudValueVariable<string>? _uriVariable;
+        private readonly Slot? _wizardSlot;
         private bool _refreshingList;
 
         #endregion
@@ -379,24 +381,24 @@ Updates the legacy installation to a Remaster installation on the avatar.";
 
         private void OnInstallButtonPressed(IButton button, ButtonEventData eventData)
         {
-            var scratchSpace = _wizardSlot.AddSlot("Scratch space");
+            var scratchSpace = _wizardSlot!.AddSlot("Scratch space");
             try
             {
-                var systemSlot = CloudSpawn.GetStatueSystem(scratchSpace, _uriVariable, _statueSystemFallback.Reference);
-                if (systemSlot == null)
+                var systemSlot = CloudSpawn.GetStatueSystem(scratchSpace, _uriVariable!, _statueSystemFallback!.Reference);
+                if (systemSlot is null)
                     return;
 
-                var result = _installSystemOnAvatar(scratchSpace, systemSlot, _installSlot.Reference, _contextMenuSlot.Reference);
+                var result = _installSystemOnAvatar!(scratchSpace, systemSlot, _installSlot!.Reference, _contextMenuSlot!.Reference);
 
-                HighlightHelper.FlashHighlight(_avatarRoot.Reference.Target, (_a) => true, result ? new colorX(0.5f, 0.5f, 0.5f, 1.0f) : new colorX(1.0f, 0.0f, 0.0f, 1.0f));
-                _confirmButton.Enabled = false;
+                HighlightHelper.FlashHighlight(_avatarRoot!.Reference.Target, (_) => true, result ? new colorX(0.5f, 0.5f, 0.5f, 1.0f) : new colorX(1.0f, 0.0f, 0.0f, 1.0f));
+                _confirmButton!.Enabled = false;
             }
             catch (Exception ex)
             {
                 var errorString = $"Exception while installing: {ex.ToString().ToUixLineEndings()}";
                 LogError(errorString);
                 LogError("Sorry! We ran into an error installing the statue system.<br>Debugging information has been copied to your clipboard; please send it to the Statue devs!<br>(Arion, Azavit, Nermerner, Uruloke)");
-                Engine.Current.InputInterface.Clipboard.SetText(_debugText.Content.Value.ToNormalLineEndings());
+                Engine.Current.InputInterface.Clipboard.SetText(_debugText!.Content.Value.ToNormalLineEndings());
             }
             finally
             {
@@ -409,9 +411,9 @@ Updates the legacy installation to a Remaster installation on the avatar.";
             try
             {
                 if (readAvatar)
-                    _avatar.ReadAvatarRoot(_avatarRoot.Reference.Target, _baseStatueMaterial.Reference.Target, _skinnedMeshRenderersOnly.State.Value, _defaultMaterialAsIs.State.Value, (StatueType)_statueType.Value.Value);
+                    _avatar!.ReadAvatarRoot(_avatarRoot!.Reference.Target, _baseStatueMaterial!.Reference.Target, _skinnedMeshRenderersOnly!.State.Value, _defaultMaterialAsIs!.State.Value, (StatueType)_statueType!.Value.Value);
                 else
-                    _avatar.UpdateParameters(_baseStatueMaterial.Reference.Target, _defaultMaterialAsIs.State.Value, (StatueType)_statueType.Value.Value);
+                    _avatar!.UpdateParameters(_baseStatueMaterial!.Reference.Target, _defaultMaterialAsIs!.State.Value, (StatueType)_statueType!.Value.Value);
 
                 if (removeNew)
                     _avatar.RemoveUnmatchedMeshRenderers();
@@ -426,14 +428,17 @@ Updates the legacy installation to a Remaster installation on the avatar.";
 
         private void RefreshUI()
         {
+            if (_avatar is null)
+                return;
+
             try
             {
                 _refreshingList = true;
-                _foundMeshRenderers.References.Clear();
-                _foundMeshRenderers.References.AddRange(_avatar.MeshRenderers.Where(x => x.NormalMeshRenderer != null).Select(x => x.NormalMeshRenderer));
+                _foundMeshRenderers!.References.Clear();
+                _foundMeshRenderers.References.AddRange(_avatar.MeshRenderers.Where(x => x.NormalMeshRenderer is not null).Select(x => x.NormalMeshRenderer!));
                 _refreshingList = false;
 
-                _listPanel.DestroyChildren();
+                _listPanel!.DestroyChildren();
 
                 var UI = new UIBuilder(_listPanel);
                 RadiantUI_Constants.SetupEditorStyle(UI);
@@ -442,7 +447,7 @@ Updates the legacy installation to a Remaster installation on the avatar.";
                 for (int i = 0; i < _avatar.MeshRenderers.Count; i++)
                 {
                     MeshRendererMap meshRendererMap = _avatar.MeshRenderers[i];
-                    if (meshRendererMap.NormalMeshRenderer == null)
+                    if (meshRendererMap.NormalMeshRenderer is null)
                         continue;
 
                     UI.Spacer(32f);
@@ -487,7 +492,7 @@ Updates the legacy installation to a Remaster installation on the avatar.";
                     UI.Style.MinWidth = 24f;
                     var removeButton = UI.Button("X");
                     UI.PopStyle();
-                    removeButton.LocalPressed += (x, y) =>
+                    removeButton.LocalPressed += (_, __) =>
                     {
                         _avatar.RemoveMeshRenderer(meshRendererMap);
                         RefreshUI();
@@ -621,21 +626,21 @@ Updates the legacy installation to a Remaster installation on the avatar.";
 
                 if (_avatar.HasExistingSystem)
                 {
-                    _confirmButton.LabelText = "Update";
-                    _removeNewButton.Enabled = true;
+                    _confirmButton!.LabelText = "Update";
+                    _removeNewButton!.Enabled = true;
                 }
                 else if (_avatar.HasLegacySystem)
                 {
-                    _confirmButton.LabelText = "Update from legacy";
-                    _removeNewButton.Enabled = true;
+                    _confirmButton!.LabelText = "Update from legacy";
+                    _removeNewButton!.Enabled = true;
                 }
                 else
                 {
-                    _confirmButton.LabelText = "Install";
-                    _removeNewButton.Enabled = false;
+                    _confirmButton!.LabelText = "Install";
+                    _removeNewButton!.Enabled = false;
                 }
 
-                _refreshButton.Enabled = true;
+                _refreshButton!.Enabled = true;
                 _confirmButton.Enabled = true;
             }
             catch (Exception ex)
