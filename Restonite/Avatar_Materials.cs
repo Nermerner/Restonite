@@ -66,7 +66,7 @@ internal partial class Avatar
                     if (material.Statue is not null && !statueList.Contains(material.Statue.ReferenceID))
                     {
                         var slot = _originalStatueMaterials.AddSlot(meshRendererMap.StatueSlot is null
-                            ? $"{statueList.Count}: Statue {statueList.Count}"
+                            ? $"{statueList.Count}: Default"
                             : $"{statueList.Count}: {meshRendererMap.StatueSlot.Name}.Set{materialSet}.Material{materialIndex}");
                         var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Statue, slot);
                         ChangeMaterialReferences(material.Statue, newMaterial);
@@ -223,7 +223,9 @@ internal partial class Avatar
                         continue;
                     }
 
-                    var key = $"{(defaultMaterialAsIs ? statueMaterial!.ReferenceID : normalMaterial!.ReferenceID)}_{map.MaterialSets[set][slot].Clothes}";
+                    var key = defaultMaterialAsIs && !map.MaterialSets[set][slot].Clothes
+                        ? $"{statueMaterial!.ReferenceID}"
+                        : $"{normalMaterial!.ReferenceID}_{map.MaterialSets[set][slot].Clothes}";
 
                     if (!oldMaterialToStatueMaterialMap.ContainsKey(key))
                     {
@@ -234,7 +236,9 @@ internal partial class Avatar
 
                         // Create a new statue material object (i.e. drives material slot on statue
                         // SMR, has default material with normal map)
-                        var newMaterialHolder = _statueMaterials.AddSlot(map.StatueSlot is null ? $"{oldMaterialToStatueMaterialMap.Count}: Statue {oldMaterialToStatueMaterialMap.Count}" : $"{oldMaterialToStatueMaterialMap.Count}: {map.StatueSlot.Name}.Set{set}.Material{slot}");
+                        var newMaterialHolder = _statueMaterials.AddSlot(map.StatueSlot is null
+                            ? $"{oldMaterialToStatueMaterialMap.Count}: Default"
+                            : $"{oldMaterialToStatueMaterialMap.Count}: {map.StatueSlot.Name}.Set{set}.Material{slot}");
 
                         var newDefaultMaterialRefId = defaultMaterialAsIs
                             ? newMaterialHolder.CopyComponent((AssetProvider<Material>)statueMaterial!).ReferenceID
@@ -354,6 +358,10 @@ internal partial class Avatar
         var statue0Material = (IAssetProvider<Material>?)_generatedMaterials?
             .FindChild("Statue Materials")?
             .FindChild("Statue 0")?
+            .GetComponent<AssetProvider<Material>>();
+        statue0Material ??= (IAssetProvider<Material>?)_generatedMaterials?
+            .FindChild("Statue Materials")?
+            .FindChild("0: Default")?
             .GetComponent<AssetProvider<Material>>();
 
         if ((defaultMaterial is null || defaultMaterial.ReferenceID == RefID.Null) && statue0Material is not null)
