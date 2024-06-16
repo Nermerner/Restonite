@@ -120,20 +120,20 @@ namespace Restonite
                 {
                     if (state.Value)
                     {
-                        _advancedModeSlot.ActiveSelf = true;
-                        _simpleModeSlot.ActiveSelf = false;
-                        UI.Canvas.Size.Value = new float2(1800f, 1000f);
+                        _advancedModeSlot!.ActiveSelf = true;
+                        _simpleModeSlot!.ActiveSelf = false;
+                        UI.Canvas.Size.Value = new float2(1900f, 1000f);
                         help.AnchorMax.Value = new float2(0.11f, help.AnchorMax.Value.y);
                         left.AnchorMin.Value = new float2(0.11f, left.AnchorMin.Value.y);
-                        left.AnchorMax.Value = new float2(0.33f, left.AnchorMax.Value.y);
-                        right.AnchorMin.Value = new float2(0.33f, right.AnchorMin.Value.y);
+                        left.AnchorMax.Value = new float2(0.31f, left.AnchorMax.Value.y);
+                        right.AnchorMin.Value = new float2(0.31f, right.AnchorMin.Value.y);
 
                         RefreshUI();
                     }
                     else
                     {
-                        _advancedModeSlot.ActiveSelf = false;
-                        _simpleModeSlot.ActiveSelf = true;
+                        _advancedModeSlot!.ActiveSelf = false;
+                        _simpleModeSlot!.ActiveSelf = true;
                         UI.Canvas.Size.Value = new float2(1000f, 1000f);
                         help.AnchorMax.Value = new float2(0.2f, help.AnchorMax.Value.y);
                         left.AnchorMin.Value = new float2(0.2f, left.AnchorMin.Value.y);
@@ -523,7 +523,7 @@ Updates the legacy installation to a Remaster installation on the avatar.
                         UI.Nest();
                         UI.PopStyle();
 
-                        var headerCols = UI.SplitHorizontally(0.03f, 0.35f, 0.35f, 0.20f, 0.07f);
+                        var headerCols = UI.SplitHorizontally(0.03f, 0.35f, 0.35f, 0.20f, 0.07f, 0.07f);
 
                         UI.NestInto(headerCols[1]);
                         headerCols[1].OffsetMax.Value = new float2(-10, 0);
@@ -549,8 +549,16 @@ Updates the legacy installation to a Remaster installation on the avatar.
                         UI.NestOut();
 
                         UI.NestInto(headerCols[4]);
-                        headerCols[3].OffsetMin.Value = new float2(10, 0);
+                        headerCols[4].OffsetMin.Value = new float2(10, 0);
+                        headerCols[4].OffsetMax.Value = new float2(-10, 0);
                         text = UI.Text("Use as-is");
+                        text.Size.Value = 20;
+                        text.HorizontalAlign.Value = TextHorizontalAlignment.Left;
+                        UI.NestOut();
+
+                        UI.NestInto(headerCols[5]);
+                        headerCols[5].OffsetMin.Value = new float2(10, 0);
+                        text = UI.Text("Clothes");
                         text.Size.Value = 20;
                         text.HorizontalAlign.Value = TextHorizontalAlignment.Left;
                         UI.NestOut();
@@ -567,7 +575,7 @@ Updates the legacy installation to a Remaster installation on the avatar.
                             UI.Nest();
                             UI.PopStyle();
 
-                            var materialCols = UI.SplitHorizontally(0.03f, 0.35f, 0.35f, 0.20f, 0.07f);
+                            var materialCols = UI.SplitHorizontally(0.03f, 0.35f, 0.35f, 0.20f, 0.07f, 0.07f);
 
                             UI.NestInto(materialCols[0]);
                             var indexLabel = UI.Text($"{materialSlot}:");
@@ -612,10 +620,21 @@ Updates the legacy installation to a Remaster installation on the avatar.
                             UI.NestInto(materialCols[4]);
                             UI.Next("Use as-is");
                             UI.CurrentRect.OffsetMin.Value = new float2(10, 0);
+                            UI.CurrentRect.OffsetMax.Value = new float2(-10, 0);
                             UI.Nest();
                             var asIs = UI.Checkbox();
                             asIs.State.Value = materialMap.UseAsIs;
                             asIs.State.OnValueChange += _ => materialMap.UseAsIs = asIs.State;
+                            UI.NestOut();
+                            UI.NestOut();
+
+                            UI.NestInto(materialCols[5]);
+                            UI.Next("Clothes");
+                            UI.CurrentRect.OffsetMin.Value = new float2(10, 0);
+                            UI.Nest();
+                            var clothes = UI.Checkbox();
+                            clothes.State.Value = materialMap.Clothes;
+                            clothes.State.OnValueChange += _ => materialMap.Clothes = clothes.State;
                             UI.NestOut();
                             UI.NestOut();
 

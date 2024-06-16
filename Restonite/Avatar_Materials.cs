@@ -1,4 +1,4 @@
-using Elements.Core;
+﻿using Elements.Core;
 using FrooxEngine;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -57,7 +57,7 @@ internal partial class Avatar
 
                     if (material.Normal is not null && !normalList.Contains(material.Normal.ReferenceID))
                     {
-                        var slot = _originalNormalMaterials.AddSlot($"{meshRendererMap.NormalSlot.Name}.Set{materialSet}.Material{materialIndex}");
+                        var slot = _originalNormalMaterials.AddSlot($"{normalList.Count}: {meshRendererMap.NormalSlot!.Name}.Set{materialSet}.Material{materialIndex}");
                         var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Normal, slot);
                         ChangeMaterialReferences(material.Normal, newMaterial);
                         normalList.Add(material.Normal.ReferenceID);
@@ -65,7 +65,9 @@ internal partial class Avatar
 
                     if (material.Statue is not null && !statueList.Contains(material.Statue.ReferenceID))
                     {
-                        var slot = _originalStatueMaterials.AddSlot(meshRendererMap.StatueSlot == null ? $"Statue {statueList.Count}" :  $"{meshRendererMap.StatueSlot.Name}.Set{materialSet}.Material{materialIndex}");
+                        var slot = _originalStatueMaterials.AddSlot(meshRendererMap.StatueSlot is null
+                            ? $"{statueList.Count}: Statue {statueList.Count}"
+                            : $"{statueList.Count}: {meshRendererMap.StatueSlot.Name}.Set{materialSet}.Material{materialIndex}");
                         var newMaterial = MaterialHelpers.CopyMaterialToSlot(material.Statue, slot);
                         ChangeMaterialReferences(material.Statue, newMaterial);
                         statueList.Add(material.Statue.ReferenceID);
@@ -111,7 +113,7 @@ internal partial class Avatar
                     {
                         Log.Info($"Creating normal material {oldMaterialToNewNormalMaterialMap.Count} for {oldMaterial.ToLongString()} using {statueType}");
 
-                        var newSlot = _normalMaterials.AddSlot($"{map.NormalSlot.Name}.Set{set}.Material{slot}");
+                        var newSlot = _normalMaterials.AddSlot($"{oldMaterialToNewNormalMaterialMap.Count}: {map.NormalSlot!.Name}.Set{set}.Material{slot}");
 
                         // Create material based on transition type
                         var newMaterial = MaterialHelpers.CreateAlphaMaterial(oldMaterial, statueType, newSlot);
@@ -126,21 +128,50 @@ internal partial class Avatar
                         originalDynVar.VariableName.Value = $"Avatar/Statue.OriginalNormalMaterial{oldMaterialToNewNormalMaterialMap.Count}";
                         originalDynVar.Reference.Target = oldMaterial.Slot;
 
-                        oldMaterialToNewNormalMaterialMap[key] = newMaterial;
+                        // boolean ref driver drives this, which drives everything else
+                        var multiDriver = newSlot.AttachComponent<ReferenceMultiDriver<IAssetProvider<Material>>>();
+
+                        if (map.MaterialSets[set][slot].Clothes)
+                        {
+                            var dynVarDriver = newSlot.AttachComponent<DynamicValueVariableDriver<int>>();
+                            dynVarDriver.VariableName.Value = "Avatar/Statue.ClothesMode";
+
+                            var valueField = newSlot.AttachComponent<ValueField<int>>();
+                            dynVarDriver.Target.ForceLink(valueField.Value);
+
+                            var valueEqualityDriver = newSlot.AttachComponent<ValueEqualityDriver<int>>();
+                            valueEqualityDriver.Reference.Value = 0;
+                            valueEqualityDriver.Invert.Value = true;
+                            valueEqualityDriver.TargetValue.Target = valueField.Value;
+
+                            var booleanReferenceDriver = newSlot.AttachComponent<BooleanReferenceDriver<IAssetProvider<Material>>>();
+                            booleanReferenceDriver.FalseTarget.Value = oldMaterial.ReferenceID;
+                            booleanReferenceDriver.TrueTarget.Value = newMaterial.ReferenceID;
+                            valueEqualityDriver.Target.ForceLink(booleanReferenceDriver.State);
+                            booleanReferenceDriver.TargetReference.ForceLink(multiDriver.Reference);
+                        }
+                        else
+                        {
+                            multiDriver.Reference.Target = newMaterial;
+                        }
+
+                        oldMaterialToNewNormalMaterialMap.Add(key, multiDriver);
                     }
 
-                    if (map.NormalMaterialSet != null)
+                    var drives = oldMaterialToNewNormalMaterialMap[key].Drives;
+
+                    if (map.NormalMaterialSet is not null)
                     {
-                        map.NormalMaterialSet.Sets[set][slot] = oldMaterialToNewNormalMaterialMap[key];
+                        drives.Add().ForceLink(map.NormalMaterialSet.Sets[set].GetElement(slot));
                     }
                     else
                     {
                         var materialSlot = map.NormalMeshRenderer.Materials.GetElement(slot);
                         var element = materialSlot.ActiveLink as SyncElement;
-                        if (materialSlot.IsDriven && materialSlot.IsLinked)
+                        if (element is not null && materialSlot.IsDriven && materialSlot.IsLinked)
                             Log.Warn($"{name} appears to already be driven by {element.Component.ToLongString()}, attempting to set anyway");
 
-                        map.NormalMeshRenderer.Materials[slot] = oldMaterialToNewNormalMaterialMap[key];
+                        drives.Add().ForceLink(materialSlot);
                     }
                 }
             }
@@ -156,9 +187,18 @@ internal partial class Avatar
 
         // Destroy all existing children
         _statueMaterials.DestroyChildren();
+        IAssetProvider<Material>? transparentMaterial = null;
+        if (MeshRenderers.SelectMany(x => x.MaterialSets.SelectMany(y => y)).Any(x => x.Clothes))
+        {
+            var slot = _statueMaterials.AddSlot("Transparent");
+            var mat = slot.AttachComponent<PBS_Metallic>();
+            mat.AlbedoColor.Value = new colorX(r: 0.0f, g: 0.0f, b: 0.0f, a: 0.0f);
+            mat.BlendMode.Value = BlendMode.Alpha;
+            transparentMaterial = mat;
+        }
 
         // Create Material objects for each statue material
-        var oldMaterialToStatueMaterialMap = new Dictionary<RefID, ReferenceMultiDriver<IAssetProvider<Material>>>();
+        var oldMaterialToStatueMaterialMap = new Dictionary<string, ReferenceMultiDriver<IAssetProvider<Material>>>();
         for (int i = 0; i < MeshRenderers.Count; i++)
         {
             MeshRendererMap map = MeshRenderers[i];
@@ -183,7 +223,7 @@ internal partial class Avatar
                         continue;
                     }
 
-                    var key = defaultMaterialAsIs ? statueMaterial.ReferenceID : normalMaterial.ReferenceID;
+                    var key = $"{(defaultMaterialAsIs ? statueMaterial!.ReferenceID : normalMaterial!.ReferenceID)}_{map.MaterialSets[set][slot].Clothes}";
 
                     if (!oldMaterialToStatueMaterialMap.ContainsKey(key))
                     {
@@ -194,7 +234,7 @@ internal partial class Avatar
 
                         // Create a new statue material object (i.e. drives material slot on statue
                         // SMR, has default material with normal map)
-                        var newMaterialHolder = _statueMaterials.AddSlot(map.StatueSlot == null ? $"Statue {oldMaterialToStatueMaterialMap.Count}" : $"{map.StatueSlot.Name}.Set{set}.Material{slot}");
+                        var newMaterialHolder = _statueMaterials.AddSlot(map.StatueSlot is null ? $"{oldMaterialToStatueMaterialMap.Count}: Statue {oldMaterialToStatueMaterialMap.Count}" : $"{oldMaterialToStatueMaterialMap.Count}: {map.StatueSlot.Name}.Set{set}.Material{slot}");
 
                         var newDefaultMaterialRefId = defaultMaterialAsIs
                             ? newMaterialHolder.CopyComponent((AssetProvider<Material>)statueMaterial!).ReferenceID
@@ -227,7 +267,24 @@ internal partial class Avatar
 
                         // boolean ref driver drives this, which drives everything else
                         var multiDriver = newMaterialHolder.AttachComponent<ReferenceMultiDriver<IAssetProvider<Material>>>();
-                        booleanReferenceDriver.TargetReference.ForceLink(multiDriver.Reference);
+
+                        if (map.MaterialSets[set][slot].Clothes)
+                        {
+                            var dynVarDriver = newMaterialHolder.AttachComponent<DynamicValueVariableDriver<int>>();
+                            dynVarDriver.VariableName.Value = "Avatar/Statue.ClothesMode";
+
+                            var multiplexer = newMaterialHolder.AttachComponent<ReferenceMultiplexer<IAssetProvider<Material>>>();
+                            dynVarDriver.Target.ForceLink(multiplexer.Index);
+                            multiplexer.References.Add().Target = normalMaterial!;
+                            booleanReferenceDriver.TargetReference.ForceLink(multiplexer.References.Add());
+                            multiplexer.References.Add().Target = transparentMaterial!;
+
+                            multiplexer.Target.ForceLink(multiDriver.Reference);
+                        }
+                        else
+                        {
+                            booleanReferenceDriver.TargetReference.ForceLink(multiDriver.Reference);
+                        }
 
                         // Drive that dynvar
                         multiDriver.Drives.Add();

@@ -1,4 +1,4 @@
-using Elements.Core;
+﻿using Elements.Core;
 using FrooxEngine;
 using FrooxEngine.CommonAvatar;
 using FrooxEngine.FinalIK;
@@ -236,6 +236,15 @@ internal partial class Avatar
                         enableRadialSlicer.Value.Value = transitionTypes.Contains(StatueType.RadialSlicer);
                         Log.Info($"Setting user config {enableRadialSlicer.Slot.ToShortString()} to {enableRadialSlicer.Value.Value}");
                     }
+
+                    var clothesMode = _userConfig.GetComponentInChildren<DynamicValueVariable<bool>>(x => x.VariableName == "Avatar/Statue.ClothesMode");
+                    if (clothesMode is null)
+                    {
+                        var slot = _userConfig.AddSlot("Statue.ClothesMode");
+                        var dynVar = slot.AttachComponent<DynamicValueVariable<int>>();
+                        dynVar.VariableName.Value = "Avatar/Statue.ClothesMode";
+                        Log.Info($"Adding user config {dynVar.Slot.ToShortString()}");
+                    }
                 });
             }
         }
@@ -260,12 +269,12 @@ internal partial class Avatar
                     if (worker is DynamicBoneChain dbc)
                     {
                         Log.Debug($"Moving drive for {dbc.ToShortString()} to slot {dbc.Slot.ToShortString()}");
-                            _existingDrivesForDisableOnFreeze.Add(dbc.Slot.ActiveSelf_Field);
-                        }
-                        else if (worker is EyeManager em)
-                        {
-                            Log.Debug($"Moving drive for {em.ToShortString()} to slot {em.Slot.ToShortString()}");
-                            _existingDrivesForDisableOnFreeze.Add(em.Slot.ActiveSelf_Field);
+                        _existingDrivesForDisableOnFreeze.Add(dbc.Slot.ActiveSelf_Field);
+                    }
+                    else if (worker is EyeManager em)
+                    {
+                        Log.Debug($"Moving drive for {em.ToShortString()} to slot {em.Slot.ToShortString()}");
+                        _existingDrivesForDisableOnFreeze.Add(em.Slot.ActiveSelf_Field);
                     }
                     else
                     {
@@ -273,21 +282,21 @@ internal partial class Avatar
                     }
                 }
             }
-            }
-            Log.Info($"Collected {_existingDrivesForDisableOnFreeze.Count} drivers for Disable on Statue");
+        }
+        Log.Info($"Collected {_existingDrivesForDisableOnFreeze.Count} drivers for Disable on Statue");
 
-            var blinder = AvatarRoot.GetComponent<VRIK>()?.Solver.BoneReferences.head.Slot?.FindChild("Blinder");
-            if (blinder?.ActiveSelf_Field.IsDriven == true)
-            {
-                Log.Info($"Removing {blinder.ToShortString()}");
-                blinder.Destroy();
-            }
+        var blinder = AvatarRoot.GetComponent<VRIK>()?.Solver.BoneReferences.head.Slot?.FindChild("Blinder");
+        if (blinder?.ActiveSelf_Field.IsDriven == true)
+        {
+            Log.Info($"Removing {blinder.ToShortString()}");
+            blinder.Destroy();
+        }
 
-            var smoothTransforms = AvatarRoot.GetComponentsInChildren<SmoothTransform>(slotFilter: x => x.Name == "Target" && x.Parent.Name.EndsWith("Proxy"));
-            foreach (var component in smoothTransforms)
-            {
-                Log.Info($"Removing {component.ToLongString()}");
-                component.Slot.RemoveComponent(component);
+        var smoothTransforms = AvatarRoot.GetComponentsInChildren<SmoothTransform>(slotFilter: x => x.Name == "Target" && x.Parent.Name.EndsWith("Proxy"));
+        foreach (var component in smoothTransforms)
+        {
+            Log.Info($"Removing {component.ToLongString()}");
+            component.Slot.RemoveComponent(component);
         }
 
         _legacySystem.Destroy();
