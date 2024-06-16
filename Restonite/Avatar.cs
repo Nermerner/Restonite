@@ -111,7 +111,7 @@ namespace Restonite
             {
                 durationDefault = _defaults.AttachComponent<DynamicValueVariable<float>>();
                 durationDefault.VariableName.Value = "Avatar/Statue.Duration.Default";
-                    durationDefault.Value.Value = 10;
+                durationDefault.Value.Value = 10;
             }
 
             var whisperPersist = _defaults.GetComponent<DynamicValueVariable<bool>>(x => x.VariableName.Value == "Avatar/Statue.Whisper.Persist");
@@ -178,6 +178,7 @@ namespace Restonite
 
             // Disable animation systems (Wigglers, Panners, etc.)
             count = 0;
+            AvatarRoot.GetComponentsInChildren<Spinner>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
             AvatarRoot.GetComponentsInChildren<Wiggler>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
             AvatarRoot.GetComponentsInChildren<Panner1D>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
             AvatarRoot.GetComponentsInChildren<Panner2D>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
@@ -193,7 +194,9 @@ namespace Restonite
             count = 0;
             AvatarRoot.GetComponentsInChildren<AvatarExpressionDriver>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
             AvatarRoot.GetComponentsInChildren<HandPoser>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
-            AvatarRoot.GetComponentsInChildren<EyeManager>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.Slot.ActiveSelf_Field); count++; });
+            AvatarRoot.GetComponentsInChildren<EyeManager>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<EyeRotationDriver>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
+            AvatarRoot.GetComponentsInChildren<EyeLinearDriver>().ForEach((component) => { AddFieldToMultidriver(dofDriver, component.EnabledField); count++; });
             Log.Info($"Driving {count} avatar expression components");
 
             // Disable toolshelfs
