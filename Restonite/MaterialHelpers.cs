@@ -1,4 +1,4 @@
-using Elements.Core;
+﻿using Elements.Core;
 using FrooxEngine;
 using System.Linq;
 
@@ -420,28 +420,36 @@ namespace Restonite
                     {
                         var newMaterial = destination.AttachComponent<PBS_Metallic>();
                         FrooxEngine.MaterialHelper.CopyMaterialProperties(dlm, newMaterial);
+                        newMaterial.Persistent = true;
                         return newMaterial;
                     }
                 case PBS_DistanceLerpSpecular dls:
                     {
                         var newMaterial = destination.AttachComponent<PBS_Specular>();
                         FrooxEngine.MaterialHelper.CopyMaterialProperties(dls, newMaterial);
+                        newMaterial.Persistent = true;
                         return newMaterial;
                     }
                 case PBS_SliceMetallic sm:
                     {
                         var newMaterial = destination.AttachComponent<PBS_Metallic>();
                         FrooxEngine.MaterialHelper.CopyMaterialProperties(sm, newMaterial);
+                        newMaterial.Persistent = true;
                         return newMaterial;
                     }
                 case PBS_SliceSpecular ss:
                     {
                         var newMaterial = destination.AttachComponent<PBS_Specular>();
                         FrooxEngine.MaterialHelper.CopyMaterialProperties(ss, newMaterial);
+                        newMaterial.Persistent = true;
                         return newMaterial;
                     }
                 default:
-                    return (IAssetProvider<Material>)destination.CopyComponent((AssetProvider<Material>)originalMaterial);
+                    {
+                        var newMaterial = destination.CopyComponent((AssetProvider<Material>)originalMaterial);
+                        newMaterial.Persistent = true;
+                        return (IAssetProvider<Material>)newMaterial;
+                    }
             }
         }
 
@@ -457,6 +465,7 @@ namespace Restonite
                                 Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                 var newMaterial = destination.AttachComponent<PBS_DualSidedMetallic>();
                                 SetupAlphaFadeDualsidedMaterial(dsm, newMaterial, destination);
+                                newMaterial.Persistent = true;
                                 return newMaterial;
                             }
                         case PBS_DualSidedSpecular dss:
@@ -464,6 +473,7 @@ namespace Restonite
                                 Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                 var newMaterial = destination.AttachComponent<PBS_DualSidedSpecular>();
                                 SetupAlphaFadeDualsidedMaterial(dss, newMaterial, destination);
+                                newMaterial.Persistent = true;
                                 return newMaterial;
                             }
                         case IPBS_Metallic m:
@@ -471,6 +481,7 @@ namespace Restonite
                                 Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                 var newMaterial = destination.AttachComponent<PBS_Metallic>();
                                 SetupAlphaFadePBSMaterial(m, newMaterial, destination);
+                                newMaterial.Persistent = true;
                                 return newMaterial;
                             }
                         case IPBS_Specular s:
@@ -478,6 +489,7 @@ namespace Restonite
                                 Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                 var newMaterial = destination.AttachComponent<PBS_Specular>();
                                 SetupAlphaFadePBSMaterial(s, newMaterial, destination);
+                                newMaterial.Persistent = true;
                                 return newMaterial;
                             }
                         case XiexeToonMaterial x:
@@ -485,6 +497,7 @@ namespace Restonite
                                 Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                 var newMaterial = destination.AttachComponent<XiexeToonMaterial>();
                                 SetupAlphaFadeXiexeMaterial(x, newMaterial, destination);
+                                newMaterial.Persistent = true;
                                 return newMaterial;
                             }
                         case UnlitMaterial x:
@@ -492,6 +505,7 @@ namespace Restonite
                                 Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                 var newMaterial = destination.AttachComponent<UnlitMaterial>();
                                 SetupAlphaFadeUnlitMaterial(x, newMaterial, destination);
+                                newMaterial.Persistent = true;
                                 return newMaterial;
                             }
                     }
@@ -507,6 +521,7 @@ namespace Restonite
                                     Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_DualSidedMetallic>();
                                     SetupAlphaCutoutDualsidedMaterial(dsm, newMaterial, destination);
+                                    newMaterial.Persistent = true;
                                     return newMaterial;
                                 }
                             case PBS_DualSidedSpecular dss:
@@ -514,6 +529,7 @@ namespace Restonite
                                     Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_DualSidedSpecular>();
                                     SetupAlphaCutoutDualsidedMaterial(dss, newMaterial, destination);
+                                    newMaterial.Persistent = true;
                                     return newMaterial;
                                 }
                             case IPBS_Metallic m:
@@ -521,6 +537,7 @@ namespace Restonite
                                     Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_Metallic>();
                                     SetupAlphaCutoutPBSMaterial(m, newMaterial, destination);
+                                    newMaterial.Persistent = true;
                                     return newMaterial;
                                 }
                             case IPBS_Specular s:
@@ -528,6 +545,7 @@ namespace Restonite
                                     Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_Specular>();
                                     SetupAlphaCutoutPBSMaterial(s, newMaterial, destination);
+                                    newMaterial.Persistent = true;
                                     return newMaterial;
                                 }
                             case XiexeToonMaterial x:
@@ -535,6 +553,7 @@ namespace Restonite
                                     Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<XiexeToonMaterial>();
                                     SetupAlphaCutoutXiexeMaterial(x, newMaterial, destination);
+                                    newMaterial.Persistent = true;
                                     return newMaterial;
                                 }
                         }
@@ -550,6 +569,7 @@ namespace Restonite
                                     Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_SliceMetallic>();
                                     SetupSlicerPlanePBSMaterial(m, newMaterial, destination);
+                                    newMaterial.Persistent = true;
                                     return newMaterial;
                                 }
                             case IPBS_Specular s:
@@ -557,6 +577,7 @@ namespace Restonite
                                     Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_SliceSpecular>();
                                     SetupSlicerPlanePBSMaterial(s, newMaterial, destination);
+                                    newMaterial.Persistent = true;
                                     return newMaterial;
                                 }
                             default:
@@ -576,6 +597,7 @@ namespace Restonite
                                     Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_DistanceLerpMetallic>();
                                     SetupRadialDisplacePBSMaterial(m, newMaterial, destination);
+                                    newMaterial.Persistent = true;
                                     return newMaterial;
                                 }
                             case IPBS_Specular s:
@@ -583,6 +605,7 @@ namespace Restonite
                                     Log.Debug($"Creating {originalMaterial.GetType().Name} as {statueType}");
                                     var newMaterial = destination.AttachComponent<PBS_DistanceLerpSpecular>();
                                     SetupRadialDisplacePBSMaterial(s, newMaterial, destination);
+                                    newMaterial.Persistent = true;
                                     return newMaterial;
                                 }
                             default:
