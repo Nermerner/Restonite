@@ -36,6 +36,8 @@ namespace Restonite
 
         protected override bool OnEngineReady()
         {
+            Harmony.PatchAll();
+
             DevCreateNewForm.AddAction("Editor", WIZARD_TITLE, (x) => StatueSystemWizard.GetOrCreateWizard(x,
                 msg => Logger.Debug(() => msg),
                 msg => Logger.Info(() => msg),
@@ -47,8 +49,6 @@ namespace Restonite
 
         protected override bool OnLoaded()
         {
-            Harmony.PatchAll();
-
             return true;
         }
 
