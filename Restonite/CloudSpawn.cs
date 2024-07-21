@@ -1,5 +1,6 @@
 ﻿using Elements.Core;
 using FrooxEngine;
+using FrooxEngine.Store;
 using FrooxEngine.Undo;
 using System;
 using System.Linq;
@@ -38,7 +39,7 @@ namespace Restonite
 
                     Log.Info("Got file successfully");
 
-                    return SpawnSlot(scratchSpace, fileData, scratchSpace.World, point, new float3(1.0f, 1.0f, 1.0f));
+                    return SpawnSlot(scratchSpace, fileData, record.Entity, scratchSpace.World, point, new float3(1.0f, 1.0f, 1.0f));
                 }
                 else
                 {
@@ -53,13 +54,13 @@ namespace Restonite
 
         #region Private Methods
 
-        private static Slot SpawnSlot(Slot x, string file, World world, float3 position, float3 scale)
+        private static Slot SpawnSlot(Slot x, string file, Record fileRecord, World world, float3 position, float3 scale)
         {
             DataTreeDictionary loadNode = DataTreeConverter.Load(file);
 
             Slot slot = x.AddSlot("SpawnSlotObject");
             slot.CreateSpawnUndoPoint();
-            slot.LoadObject(loadNode);
+            slot.LoadObject(loadNode, fileRecord);
             slot.GlobalPosition = position;
             slot.GlobalScale = scale;
 
