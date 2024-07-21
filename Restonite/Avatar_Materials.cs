@@ -134,7 +134,7 @@ internal partial class Avatar
                         if (map.MaterialSets[set][slot].Clothes)
                         {
                             var dynVarDriver = newSlot.AttachComponent<DynamicValueVariableDriver<int>>();
-                            dynVarDriver.VariableName.Value = "Avatar/Statue.ClothesMode";
+                            dynVarDriver.VariableName.Value = "Avatar/Statue.Clothing.TransitionType";
 
                             var valueField = newSlot.AttachComponent<ValueField<int>>();
                             dynVarDriver.Target.ForceLink(valueField.Value);
@@ -275,7 +275,7 @@ internal partial class Avatar
                         if (map.MaterialSets[set][slot].Clothes)
                         {
                             var dynVarDriver = newMaterialHolder.AttachComponent<DynamicValueVariableDriver<int>>();
-                            dynVarDriver.VariableName.Value = "Avatar/Statue.ClothesMode";
+                            dynVarDriver.VariableName.Value = "Avatar/Statue.Clothing.TransitionType";
 
                             var multiplexer = newMaterialHolder.AttachComponent<ReferenceMultiplexer<IAssetProvider<Material>>>();
                             dynVarDriver.Target.ForceLink(multiplexer.Index);

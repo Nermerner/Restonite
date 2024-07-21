@@ -236,15 +236,6 @@ internal partial class Avatar
                         enableRadialSlicer.Value.Value = transitionTypes.Contains(StatueType.RadialSlicer);
                         Log.Info($"Setting user config {enableRadialSlicer.Slot.ToShortString()} to {enableRadialSlicer.Value.Value}");
                     }
-
-                    var clothesMode = _userConfig.GetComponentInChildren<DynamicValueVariable<bool>>(x => x.VariableName == "Avatar/Statue.ClothesMode");
-                    if (clothesMode is null)
-                    {
-                        var slot = _userConfig.AddSlot("Statue.ClothesMode");
-                        var dynVar = slot.AttachComponent<DynamicValueVariable<int>>();
-                        dynVar.VariableName.Value = "Avatar/Statue.ClothesMode";
-                        Log.Info($"Adding user config {dynVar.Slot.ToShortString()}");
-                    }
                 });
             }
         }
