@@ -346,6 +346,9 @@ Normally the mod will merge the statue materials with your normal avatar materia
 Default transition type:
 The transition type to use for when the avatar is turned into a statue. AlphaCutout requires special alpha textures. PlaneSlicer and RadialSlicer require PBS_Metallic or PBS_Specular materials. This can be changed per material slot using Advanced Mode.
 
+Clothes toggle:
+Marks the material as clothing which will allow the statue system to control how clothing should transition along with the rest of the body.
+
 Remove new MeshRenderers:
 Removes all MeshRenderers from installation that have not previously been setup by the mod. Useful when tweaking settings on an already set up avatar.
 
