@@ -23,7 +23,7 @@ not, an error message will be visible which tells you what went wrong.
 
 ## Installation
 
-1. Install [MonkeyLoader](https://github.com/MonkeyModdingTroop/MonkeyLoader).
+1. Install [MonkeyLoader Resonite Game Pack](https://github.com/ResoniteModdingGroup/MonkeyLoader.GamePacks.Resonite).
 2. Place
    [Restonite.nupkg](https://github.com/Nermerner/Restonite/releases/latest/download/Restonite.nupkg)
    into your MonkeyLoader\Mods folder. This folder should be at C:\Program Files
