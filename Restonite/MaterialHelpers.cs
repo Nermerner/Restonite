@@ -623,8 +623,8 @@ namespace Restonite
 
         public static void CopyStatueMaterialProperties(IAssetProvider<Material> from, IAssetProvider<Material> to)
         {
-            ICommonMaterial commonMaterial = from as ICommonMaterial;
-            ICommonMaterial commonMaterial2 = to as ICommonMaterial;
+            ICommonMaterial? commonMaterial = from as ICommonMaterial;
+            ICommonMaterial? commonMaterial2 = to as ICommonMaterial;
             if (commonMaterial is not null && commonMaterial2 is not null)
             {
                 commonMaterial2.NormalScale = commonMaterial.NormalScale;
@@ -633,8 +633,8 @@ namespace Restonite
                 commonMaterial2.NormalMap = commonMaterial.NormalMap;
             }
 
-            IPBS_Material iPBS_Material = from as IPBS_Material;
-            IPBS_Material iPBS_Material2 = to as IPBS_Material;
+            IPBS_Material? iPBS_Material = from as IPBS_Material;
+            IPBS_Material? iPBS_Material2 = to as IPBS_Material;
             if (iPBS_Material2 is not null && commonMaterial is not null)
             {
                 iPBS_Material2.TextureOffset = commonMaterial.TextureOffset;
