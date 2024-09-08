@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net462</TargetFramework>
     <AssemblyTitle>Restonite</AssemblyTitle>
@@ -11,7 +11,7 @@
     <PackageId>Restonite</PackageId>
     <Title>Restonite</Title>
     <Authors>Nermerner, Uruloke</Authors>
-    <Version>1.4.0</Version>
+    <Version>1.4.1</Version>
     <Description>A Resonite Mod Loader mod used to assist in the setup of the Statufication system on avatars.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
