@@ -1,7 +1,9 @@
 # Restonite
 
-This mod allows easy installation of the Statufication Remaster system for your
-avatar. It will appear as an editor you can create with a dev tool.
+A [ResoniteModLoader](https://github.com/resonite-modding-group/ResoniteModLoader)
+mod for [Resonite](https://resonite.com/) that allows easy installation of the
+Statufication Remaster system for your avatar. It will appear as an editor you
+can create with a dev tool.
 
 To setup your avatar follow the procedure below:
 
@@ -23,11 +25,14 @@ not, an error message will be visible which tells you what went wrong.
 
 ## Installation
 
-1. Install [MonkeyLoader Resonite Game Pack](https://github.com/ResoniteModdingGroup/MonkeyLoader.GamePacks.Resonite).
+1. Install [ResoniteModLoader](https://github.com/resonite-modding-group/ResoniteModLoader).
 2. Place
-   [Restonite.nupkg](https://github.com/Nermerner/Restonite/releases/latest/download/Restonite.nupkg)
-   into your MonkeyLoader\Mods folder. This folder should be at C:\Program Files
-   (x86)\Steam\steamapps\common\Resonite\MonkeyLoader\Mods for a default
-   install.
+   [Restonite.dll](https://github.com/Nermerner/Restonite/releases/latest/download/Restonite.dll)
+   into your rml_mods folder. This folder should be at C:\Program Files
+   (x86)\Steam\steamapps\common\Resonite\rml_mods for a default install.
 3. Start the game. If you want to verify that the mod is working you can check
    your Resonite logs.
+
+## Contributing and Building from source
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md).
