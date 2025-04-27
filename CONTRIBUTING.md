@@ -16,6 +16,13 @@ Building the mod from source is easy. You'll need to install the latest .NET SDK
 
 And that's it! If you go to compile the mod again at a later date, don't forget to pull the latest changes from git before you recompile.
 
+### Debugging and hot reload
+
+This mod supports the [ResoniteHotReloadLib](https://github.com/Nytra/ResoniteHotReloadLib) by Nytra when compiling in Debug mode.
+To make use of this you'll need to make sure you follow the instructions in the Pre-requisites section for that mod first. After that
+you can compile the mod in Debug mode and it will automatically copy itself to the correct folder and allow you to reload the mod from
+inside the game in accordance with the Usage section for that mod.
+
 <details>
 <summary>I need a step-by-step walkthrough on how to do this (click to expand)</summary>
 
