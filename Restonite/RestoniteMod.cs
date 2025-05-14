@@ -64,7 +64,7 @@ namespace Restonite
             ResoniteHotReloadLib.HotReloader.RegisterForHotReload(this);
 #endif
 
-            Setup();
+            Engine.Current.OnReady += Setup;
         }
 
 #endregion
