@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
     <AssemblyTitle>Restonite</AssemblyTitle>
@@ -7,8 +7,11 @@
     <Title>Restonite</Title>
     <Authors>Nermerner, Uruloke</Authors>
     <Version>1.4.3</Version>
+    <AssemblyVersion>$(Version)</AssemblyVersion>
     <Description>A Resonite Mod Loader mod used to assist in the setup of the Statufication system on avatars.</Description>
     <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <Deterministic>true</Deterministic>
   </PropertyGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
