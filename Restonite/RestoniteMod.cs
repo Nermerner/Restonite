@@ -1,5 +1,4 @@
 using FrooxEngine;
-using HarmonyLib;
 using ResoniteModLoader;
 using System;
 using System.Collections.Generic;
@@ -20,7 +19,6 @@ namespace Restonite
         public override string Link => "https://github.com/Nermerner/Restonite";
 
         public const string WIZARD_TITLE = "Statue System Wizard (Mod)";
-        private const string _harmonyId = "uruloke.Restonite";
 
         #endregion
 
@@ -30,10 +28,6 @@ namespace Restonite
         // This means removing patches, clearing memory that may be in use etc.
         static void BeforeHotReload()
         {
-            // Unpatch Harmony
-            Harmony harmony = new Harmony(_harmonyId);
-            harmony.UnpatchAll(_harmonyId);
-
 #if DEBUG
             ResoniteHotReloadLib.HotReloader.RemoveMenuOption("Editor", WIZARD_TITLE);
 #endif
@@ -48,9 +42,6 @@ namespace Restonite
 
         private static void Setup()
         {
-            var harmony = new Harmony(_harmonyId);
-            harmony.PatchAll();
-
             DevCreateNewForm.AddAction("Editor", WIZARD_TITLE, (x) => StatueSystemWizard.GetOrCreateWizard(x,
                 msg => Debug(() => msg),
                 msg => Msg(() => msg),
