@@ -1,10 +1,9 @@
-﻿namespace Restonite
+﻿namespace Restonite;
+
+internal enum StatueType : int
 {
-    internal enum StatueType : int
-    {
-        AlphaFade,
-        AlphaCutout,
-        PlaneSlicer,
-        RadialSlicer,
-    }
+    AlphaFade,
+    AlphaCutout,
+    PlaneSlicer,
+    RadialSlicer,
 }
