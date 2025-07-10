@@ -5,8 +5,6 @@ namespace Restonite;
 
 internal static class ExtensionMethods
 {
-    #region Public Methods
-
     public static void Setup(this EnumMemberEditor editor, IField target)
     {
         var ui = new UIBuilder(editor.Slot);
@@ -63,6 +61,4 @@ internal static class ExtensionMethods
     {
         return text.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "<br>");
     }
-
-    #endregion
 }
